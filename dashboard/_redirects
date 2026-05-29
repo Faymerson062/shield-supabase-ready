@@ -1,5 +1,9 @@
 # Arquivo _redirects do Netlify (sem extensão, fica DENTRO da pasta publicada).
-# Formato: <de>  <para>  <código http>
+# Formato: <de>  <para>  <código http>[!]
 #
-# Manda a raiz "/" para a tela de login. O 302 = redirecionamento temporário.
-/    /login.html    302
+# O "!" no final FORÇA o redirect. Sem ele, o Netlify serve o index.html
+# da raiz ANTES de aplicar a regra (arquivo estático vence redirect "soft").
+# Como existe um index.html na raiz, precisamos do "!" para o redirect valer.
+#
+# 302 = redirecionamento temporário (o navegador não memoriza para sempre).
+/    /login.html    302!

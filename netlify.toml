@@ -14,9 +14,6 @@
   # então o comando de build fica vazio.
   command = ""
 
-# Redirecionamento: se alguém abrir a raiz "/", mandamos para o login.
-# Assim a primeira coisa que o usuário vê é a tela de login.
-[[redirects]]
-  from = "/"
-  to = "/login.html"
-  status = 302
+# As regras de redirect ficam SÓ no arquivo dashboard/_redirects.
+# Tê-las também aqui criaria duas fontes da verdade (e pode conflitar).
+# Uma única fonte = mais fácil de entender e manter (DRY).
