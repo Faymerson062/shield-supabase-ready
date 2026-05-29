@@ -1,0 +1,22 @@
+# netlify.toml — arquivo de configuração do Netlify
+#
+# O Netlify lê este arquivo automaticamente na raiz do repositório e usa
+# ele para saber O QUE publicar e COMO. Tudo aqui pode ser feito também
+# pela interface web, mas tê-lo no Git é a boa prática (configuração versionada).
+
+[build]
+  # "publish" = qual pasta vira a raiz do site publicado.
+  # Publicamos apenas dashboard/ porque é a parte estática (HTML/CSS/JS).
+  # O server/ (Express) NÃO vai pro Netlify — ele precisa de um Node rodando.
+  publish = "dashboard"
+
+  # Não há etapa de build (não usamos React/Vite/etc.). São arquivos prontos,
+  # então o comando de build fica vazio.
+  command = ""
+
+# Redirecionamento: se alguém abrir a raiz "/", mandamos para o login.
+# Assim a primeira coisa que o usuário vê é a tela de login.
+[[redirects]]
+  from = "/"
+  to = "/login.html"
+  status = 302
