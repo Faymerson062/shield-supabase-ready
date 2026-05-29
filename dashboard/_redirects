@@ -1,0 +1,5 @@
+# Arquivo _redirects do Netlify (sem extensão, fica DENTRO da pasta publicada).
+# Formato: <de>  <para>  <código http>
+#
+# Manda a raiz "/" para a tela de login. O 302 = redirecionamento temporário.
+/    /login.html    302

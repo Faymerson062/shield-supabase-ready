@@ -1063,13 +1063,12 @@
      ============================================================ -->
 <script>
   // ============================================================
-  // CONFIGURAÇÃO: preencha com suas credenciais do Supabase
-  // Encontre em: https://supabase.com → Seu Projeto → Settings → API
+  // CONFIGURAÇÃO
+  // O objeto CONFIG vem do arquivo config.js, carregado no <head>.
+  // NÃO redeclaramos CONFIG aqui: "const CONFIG" duas vezes no mesmo
+  // escopo quebra o script inteiro (SyntaxError). Uma única fonte da
+  // verdade para as credenciais — princípio DRY (Don't Repeat Yourself).
   // ============================================================
-  const CONFIG = {
-    SUPABASE_URL: 'https://pfbgsviarvnkaadrkxfd.supabase.co',
-    SUPABASE_ANON_KEY: 'sb_publishable_vMQXPTlWH30Bys_bgojo5A_IdyjXEdH',
-  };
 
   // ============================================================
   // Estado global da aplicação
