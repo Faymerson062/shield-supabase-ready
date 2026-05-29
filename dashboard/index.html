@@ -1150,6 +1150,17 @@
     });
   }
 
+  // Posiciona um menu (position: fixed) logo abaixo do seu botão, centralizado.
+  // Usar o BOTÃO como âncora (não o seletor [data-sid], que casa botão E menu).
+  function posicionarDropdown(menu) {
+    const wrap = menu.closest('.row-cmd-wrap');
+    const btn = wrap?.querySelector('.row-cmd-btn');
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    menu.style.top = (rect.bottom + 8) + 'px';
+    menu.style.left = (rect.left + rect.width / 2) + 'px';
+  }
+
   function toggleDropdown(sid) {
     // Fecha todos os outros dropdowns abertos
     document.querySelectorAll('.row-cmd-menu.open').forEach(m => {
@@ -1160,18 +1171,30 @@
     if (!menu) return;
 
     menu.classList.toggle('open');
-
-    // Posiciona ao abrir — centralizado abaixo do botão
-    if (menu.classList.contains('open')) {
-      const btn = document.querySelector(`[data-sid="${sid}"]`);
-      if (btn) {
-        const rect = btn.getBoundingClientRect();
-        const btnCenter = rect.left + rect.width / 2;
-        menu.style.top = (rect.bottom + 8) + 'px';
-        menu.style.left = btnCenter + 'px';
-      }
-    }
+    if (menu.classList.contains('open')) posicionarDropdown(menu);
   }
+
+  // Reposiciona (ou fecha) os menus abertos ao rolar ou redimensionar.
+  // Como o menu é position: fixed, ele precisa acompanhar o botão que se move
+  // junto com a página/tabela. Se o botão sair da área visível, fecha o menu.
+  function reposicionarDropdownsAbertos() {
+    document.querySelectorAll('.row-cmd-menu.open').forEach(menu => {
+      const wrap = menu.closest('.row-cmd-wrap');
+      const btn = wrap?.querySelector('.row-cmd-btn');
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      // Botão saiu da janela visível? fecha o menu.
+      if (rect.bottom < 0 || rect.top > window.innerHeight) {
+        menu.classList.remove('open');
+      } else {
+        posicionarDropdown(menu);
+      }
+    });
+  }
+  // 'true' no 3º argumento = captura: pega o scroll de QUALQUER container
+  // (inclusive a tabela com overflow), não só o da janela.
+  window.addEventListener('scroll', reposicionarDropdownsAbertos, true);
+  window.addEventListener('resize', reposicionarDropdownsAbertos);
 
   // Fecha dropdown ao clicar fora
   document.addEventListener('click', e => {
